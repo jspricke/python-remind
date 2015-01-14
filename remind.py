@@ -107,7 +107,8 @@ class Remind(object):
     @staticmethod
     def _add_vevent(calendar, event):
         vevent = calendar.add('vevent')
-        vevent.add('dtstart').value = event['dtstart'][0]
+        dtstart = vevent.add('dtstart')
+        dtstart.value = event['dtstart'][0]
         vevent.add('summary').value = event['msg']
         if 'location' in event:
             vevent.add('location').value = event['location']
@@ -140,7 +141,7 @@ class Remind(object):
                 vevent.rruleset = rset
             else:
                 rset = rrule.rruleset()
-                for dat in event['dtstart'][1:]:
+                for dat in event['dtstart']:
                     if isinstance(event['dtstart'][0], datetime):
                         # Workaround for a bug in Davdroid
                         # ignore the time zone information for rdates
@@ -148,7 +149,12 @@ class Remind(object):
                         rset.rdate(dat.astimezone(gettz('UTC')))
                     else:
                         rset.rdate(datetime(dat.year, dat.month, dat.day))
+                # temporary set dtstart to a different date, so it's not removed from rset by python-vobject
+                # works around bug in Android:
+                # https://github.com/rfc2822/davdroid/issues/340
+                dtstart.value = event['dtstart'][0] - timedelta(days=1)
                 vevent.rruleset = rset
+                dtstart.value = event['dtstart'][0]
                 if not isinstance(event['dtstart'][0], datetime):
                     vevent.add('dtend').value = event['dtstart'][0] + timedelta(days=1)
 
