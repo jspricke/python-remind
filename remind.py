@@ -142,7 +142,10 @@ class Remind(object):
                 rset = rrule.rruleset()
                 for dat in event['dtstart'][1:]:
                     if isinstance(event['dtstart'][0], datetime):
-                        rset.rdate(dat)
+                        # Workaround for a bug in Davdroid
+                        # ignore the time zone information for rdates
+                        # https://github.com/rfc2822/davdroid/issues/340
+                        rset.rdate(dat.astimezone(gettz('UTC')))
                     else:
                         rset.rdate(datetime(dat.year, dat.month, dat.day))
                 vevent.rruleset = rset
