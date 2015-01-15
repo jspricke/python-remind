@@ -15,6 +15,12 @@ Use cur URL | ics2rem
 
 Have a look at [remind-caldav](http://github.com/jspricke/remind-caldav)
 
+## Parsing of the Remind MSG body
+
+`%" summary at location %" description`
+
+The `%"` is omitted, if there is no description in the iCalendar.
+
 ## ``ics_compare.py``
 
 There is a similar program in python-vobject ``ics_diff.py``.
