@@ -75,6 +75,10 @@ class Remind(object):
                 Remind._add_vevent(vevents[calendar], event)
         return vevents
 
+    @staticmethod
+    def _gen_description(text):
+        return text[text.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
+
     def _parse_remind_line(self, line, text):
         event = {}
         dat = [int(f) for f in line[4].split('/')]
@@ -93,7 +97,7 @@ class Remind(object):
             event['msg'] = msg
 
         if '%"' in text:
-            event['description'] = text[text.rfind('%"')+3:].replace('%_', '\n').replace('["["]', '[').strip()
+            event['description'] = Remind._gen_description(text)
 
         event['uid'] = '%s-%s@%s' % (line[2], sha1(text.encode('utf-8')).hexdigest(), getfqdn())
 
