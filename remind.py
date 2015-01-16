@@ -40,7 +40,9 @@ class Remind(object):
         self._mtime = 0
 
     def _parse_remind(self, filename, lines=''):
-        rem = Popen(['remind', '-l', '-s%d' % self._month, '-b1', '-r', filename, str(self._startdate)], stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
+        p = Popen(['remind', '-l', '-s%d' % self._month, '-b1', '-r',
+                   filename, str(self._startdate)], stdin=PIPE, stdout=PIPE)
+        rem = p.communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
 
         if len(rem) == 0:
             return {}
