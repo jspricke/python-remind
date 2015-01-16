@@ -94,7 +94,7 @@ class Remind(object):
             event['msg'] = msg
 
         if '%"' in text:
-            event['description'] = text[text.rfind('%"')+3:].replace('%_', '\n').replace('["["]', '[').strip()
+            event['description'] = _gen_description(text)
 
         event['uid'] = '%s-%s@%s' % (line[2], sha1(text.encode('utf-8')).hexdigest(), getfqdn())
 
@@ -103,6 +103,9 @@ class Remind(object):
     def _gen_dtstart(dat, start):
         return datetime(dat[0], dat[1], dat[2], start[0], start[1],
                         tzinfo=self.localtz)
+
+    def _gen_description(t):
+        return t[t.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
 
     @staticmethod
     def weekly(dates):
