@@ -216,38 +216,69 @@ class Remind(object):
         return ccal
 
     def to_remind(self, ical, label=None, priority=None):
+        def _has_rrule_freq_set(event):
+            return event.rruleset._rrule[0]._freq != 0
+
+        def _with_rrule_freq(event, rule):
+            return event.rruleset._rrule[0]._freq == rule
+
+        def _is_daily(event):
+            return _with_rrule_freq(event, rrule.DAILY)
+
+        def _is_weekly(event):
+            return _with_rrule_freq(event, rrule.WEEKLY)
+
+        def _by_weekday(event):
+            return event.rruleset._rrule[0]._byweekday
+
+        def _by_weekday_p(event, pred):
+            return _by_weekday(event) and pred(_by_weekday(event))
+
+        def _rrule_until(e):
+            return e.rruleset._rrule[0]._until
+
+        def _rrule_count(e):
+            return e.rruleset._rrule[0]._count
+
+        def _until_fmt(event, fmt):
+            return _rrule_until(event).strftime(fmt)
+
+        def _event_duration(e):
+            if hasattr(e, 'dtend'):
+                return e.dtend.value - e.dtstart.value
+            elif hasattr(e, 'duration') and e.duration.value:
+                return e.duration.value
+
         reminders = []
         for event in ical.vevent_list:
             remind = []
             remind.append('REM')
+            greater_one = lambda x: x > 1
             if not hasattr(event, 'rdate'):
                 remind.append(event.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
             if priority:
                 remind.append('PRIORITY %s' % priority)
 
-            if hasattr(event, 'rrule') and event.rruleset._rrule[0]._freq != 0:
-                if event.rruleset._rrule[0]._freq == rrule.DAILY or (event.rruleset._rrule[0]._byweekday and len(event.rruleset._rrule[0]._byweekday) > 1):
+            if hasattr(event, 'rrule') and _has_rrule_freq_set(event):
+                if _is_daily(event) or (_by_weekday_p(event, greater_one)):
                     remind.append('*1')
-                elif event.rruleset._rrule[0]._freq == rrule.WEEKLY:
+                elif _is_weekly(event):
                     remind.append('*7')
                 #TODO MONTHLY, ..
                 else:
                     raise NotImplementedError
 
-                if event.rruleset._rrule[0]._byweekday and len(event.rruleset._rrule[0]._byweekday) > 1:
+                if _by_weekday_p(event, greater_one):
                     daynums = set(range(7)) - set(event.rruleset._rrule[0]._byweekday)
                     weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
                     days = [weekdays[day] for day in daynums]
                     remind.append('SKIP OMIT %s' % ' '.join(days))
-                if event.rruleset._rrule[0]._until:
-                    remind.append(event.rruleset._rrule[0]._until.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
-                elif event.rruleset._rrule[0]._count:
+                if _rrule_until(event):
+                    remind.append(_until_fmt(event, 'UNTIL %b %d %Y').replace(' 0', ' '))
+                elif _rrule_count(event):
                     remind.append(event.rruleset[-1].strftime('UNTIL %b %d %Y').replace(' 0', ' '))
 
-            if hasattr(event, 'dtend'):
-                duration = event.dtend.value - event.dtstart.value
-            elif hasattr(event, 'duration') and event.duration.value:
-                duration = event.duration.value
+            duration = _event_duration(event)
 
             if type(event.dtstart.value) is date and duration.days > 1:
                 remind.append('*1')
