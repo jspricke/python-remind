@@ -397,12 +397,23 @@ def ics2rem():
     from argparse import ArgumentParser, FileType
     from sys import stdin, stdout
 
-    parser = ArgumentParser(description='Converter from iCalendar to Remind syntax.')
-    parser.add_argument('-l', '--label', help='Label for every Remind entry')
-    parser.add_argument('-p', '--priority', type=int, help='Priority for every Remind entry (0..9999)')
-    parser.add_argument('-z', '--zone', default='Europe/Berlin', help='Timezone of Remind file (default: Europe/Berlin)')
-    parser.add_argument('infile', nargs='?', type=FileType('r'), default=stdin, help='Input iCalendar file (default: stdin)')
-    parser.add_argument('outfile', nargs='?', type=FileType('w'), default=stdout, help='Output Remind file (default: stdout)')
+    parser = ArgumentParser(description = 'Converter from iCalendar to Remind syntax.')
+    parser.add_argument('-l', '--label',
+                        help = 'Label for every Remind entry')
+
+    parser.add_argument('-p', '--priority', type = int,
+                        help = 'Priority for every Remind entry (0..9999)')
+
+    parser.add_argument('-z', '--zone', default = 'Europe/Berlin',
+                        help = 'Timezone of Remind file (default: Europe/Berlin)')
+    parser.add_argument('infile', nargs='?', type = FileType('r'),
+                        default = stdin,
+                        help = 'Input iCalendar file (default: stdin)')
+
+    parser.add_argument('outfile', nargs='?', type = FileType('w'),
+                        default = stdout,
+                        help = 'Output Remind file (default: stdout)')
+
     args = parser.parse_args()
 
     zone = gettz(args.zone)
@@ -410,4 +421,6 @@ def ics2rem():
     # (python-vobject tests for the zone attribute)
     zone.zone = args.zone
 
-    args.outfile.write(Remind(zone).to_remind(readOne(args.infile.read().decode('utf-8')), args.label, args.priority).encode('utf-8'))
+    read = readOne(args.infile.read().decode('utf-8'))
+    r = Remind(zone).to_remind(read, args.label, args.priority).encode('utf-8')
+    args.outfile.write(r)
