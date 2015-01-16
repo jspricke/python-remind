@@ -245,6 +245,14 @@ class Remind(object):
 
         return rep
 
+    @staticmethod
+    def _event_duration(event):
+        if hasattr(event, 'dtend'):
+            return event.dtend.value - event.dtstart.value
+        elif hasattr(event, 'duration') and event.duration.value:
+            return event.duration.value
+        return timedelta(0)
+
     def to_remind(self, ical, label=None, priority=None):
         reminders = []
         for event in ical.vevent_list:
@@ -259,10 +267,7 @@ class Remind(object):
             if hasattr(event, 'rrule') and event.rruleset._rrule[0]._freq != 0:
                 remind.extend(Remind._parse_rruleset(event.rruleset))
 
-            if hasattr(event, 'dtend'):
-                duration = event.dtend.value - event.dtstart.value
-            elif hasattr(event, 'duration') and event.duration.value:
-                duration = event.duration.value
+            duration = Remind._event_duration(event)
 
             if type(event.dtstart.value) is date and duration.days > 1:
                 remind.append('*1')
