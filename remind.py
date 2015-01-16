@@ -29,7 +29,8 @@ from vobject import readOne, iCalendar
 
 class Remind(object):
 
-    def __init__(self, localtz, filename=expanduser('~/.reminders'), startdate=date.today()-timedelta(weeks=12), month=15):
+    def __init__(self, localtz, filename=expanduser('~/.reminders'),
+                 startdate=date.today()-timedelta(weeks=12), month=15):
         self._localtz = localtz
         self._filename = filename
         self._startdate = startdate
