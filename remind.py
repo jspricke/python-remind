@@ -81,7 +81,7 @@ class Remind(object):
         dat = [int(f) for f in line[4].split('/')]
         if line[8] != '*':
             start = divmod(int(line[8]), 60)
-            event['dtstart'] = [datetime(dat[0], dat[1], dat[2], start[0], start[1], tzinfo=self._localtz)]
+            event['dtstart'] = [_gen_dtstart(dat, start)]
             if line[7] != '*':
                 event['duration'] = timedelta(minutes=int(line[7]))
         else:
@@ -99,6 +99,10 @@ class Remind(object):
         event['uid'] = '%s-%s@%s' % (line[2], sha1(text.encode('utf-8')).hexdigest(), getfqdn())
 
         return event
+
+    def _gen_dtstart(dat, start):
+        return datetime(dat[0], dat[1], dat[2], start[0], start[1],
+                        tzinfo=self.localtz)
 
     @staticmethod
     def weekly(dates):
