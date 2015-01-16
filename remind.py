@@ -357,11 +357,25 @@ def rem2ics():
     from sys import stdin, stdout
 
     parser = ArgumentParser(description='Converter from Remind to iCalendar syntax.')
-    parser.add_argument('-s', '--startdate', type=lambda s: parse(s).date(), default=date.today(), help='Start offset for remind call')
-    parser.add_argument('-m', '--month', type=int, default=15, help='Number of manth to generate calendar beginning wit stadtdate (default: 15)')
-    parser.add_argument('-z', '--zone', default='Europe/Berlin', help='Timezone of Remind file (default: Europe/Berlin)')
-    parser.add_argument('infile', nargs='?', default=expanduser('~/.reminders'), help='The Remind file to process (default: ~/.reminders)')
-    parser.add_argument('outfile', nargs='?', type=FileType('w'), default=stdout, help='Output iCalendar file (default: stdout)')
+
+    parser.add_argument('-s', '--startdate', type = lambda s: parse(s).date(),
+                        default = date.today(),
+                        help = 'Start offset for remind call')
+
+    parser.add_argument('-m', '--month', type = int, default = 15,
+                        help='Number of manth to generate calendar beginning wit stadtdate (default: 15)')
+
+    parser.add_argument('-z', '--zone', default='Europe/Berlin',
+                        help = 'Timezone of Remind file (default: Europe/Berlin)')
+
+    parser.add_argument('infile', nargs='?',
+                        default = expanduser('~/.reminders'),
+                        help = 'The Remind file to process (default: ~/.reminders)')
+
+    parser.add_argument('outfile', nargs='?', type = FileType('w'),
+                        default = stdout,
+                        help = 'Output iCalendar file (default: stdout)')
+
     args = parser.parse_args()
 
     zone = gettz(args.zone)
