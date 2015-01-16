@@ -384,11 +384,14 @@ def rem2ics():
     zone.zone = args.zone
 
     if args.infile == '-':
-        vobject = Remind(zone, args.infile, startdate=args.startdate, month=args.month).stdin_to_vobject(stdin.read().decode('utf-8'))
+        r = Remind(zone, args.infile, startdate = args.startdate, month = args.month)
+        vobject = r.stdin_to_vobject(stdin.read().decode('utf-8'))
         if vobject:
             args.outfile.write(vobject.serialize())
     else:
-        args.outfile.write(Remind(zone, startdate=args.startdate, month=args.month).to_vobject_combined(args.infile).serialize())
+        r = Remind(zone, startdate=args.startdate, month=args.month)
+        vo = r.to_vobject_combined(args.infile).serialize()
+        args.outfile.write(vo)
 
 def ics2rem():
     from argparse import ArgumentParser, FileType
