@@ -79,6 +79,11 @@ class Remind(object):
     def _gen_description(text):
         return text[text.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
 
+    @staticmethod
+    def _gen_uid(line, text):
+        hashed_text = sha1(text.encode('utf-8')).hexdigest()
+        return '%s-%s@%s' % (line[2], hashed_text, getfqdn())
+
     def _parse_remind_line(self, line, text):
         event = {}
         dat = [int(f) for f in line[4].split('/')]
@@ -99,7 +104,7 @@ class Remind(object):
         if '%"' in text:
             event['description'] = Remind._gen_description(text)
 
-        event['uid'] = '%s-%s@%s' % (line[2], sha1(text.encode('utf-8')).hexdigest(), getfqdn())
+        event['uid'] = Remind._gen_uid(line, text)
 
         return event
 
