@@ -96,7 +96,7 @@ class Remind(object):
         if '%"' in text:
             event['description'] = _gen_description(text)
 
-        event['uid'] = '%s-%s@%s' % (line[2], sha1(text.encode('utf-8')).hexdigest(), getfqdn())
+        event['uid'] = _gen_uid(line, text)
 
         return event
 
@@ -106,6 +106,12 @@ class Remind(object):
 
     def _gen_description(t):
         return t[t.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
+
+    def _gen_uid(line, text):
+        def utfshahex(t):
+            return sha1(t.encode('utf-8')).hexdigest()
+
+        return '%s-%s@%s' % (line[2], utfshahex(text), getfqdn())
 
     @staticmethod
     def weekly(dates):
