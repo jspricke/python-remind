@@ -253,14 +253,13 @@ class Remind(object):
         for event in ical.vevent_list:
             remind = []
             remind.append('REM')
-            greater_one = lambda x: x > 1
             if not hasattr(event, 'rdate'):
                 remind.append(event.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
             if priority:
                 remind.append('PRIORITY %s' % priority)
 
             if hasattr(event, 'rrule') and _has_rrule_freq_set(event):
-                if _is_daily(event) or (_by_weekday_p(event, greater_one)):
+                if _is_daily(event) or (_by_weekday_p(event, lambda x: x > 1)):
                     remind.append('*1')
                 elif _is_weekly(event):
                     remind.append('*7')
@@ -268,7 +267,7 @@ class Remind(object):
                 else:
                     raise NotImplementedError
 
-                if _by_weekday_p(event, greater_one):
+                if _by_weekday_p(event, lambda x: x > 1):
                     daynums = set(range(7)) - set(event.rruleset._rrule[0]._byweekday)
                     weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
                     days = [weekdays[day] for day in daynums]
