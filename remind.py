@@ -253,60 +253,71 @@ class Remind(object):
             return event.duration.value
         return timedelta(0)
 
-    def to_remind(self, ical, label=None, priority=None):
+    @staticmethod
+    def _gen_msg(event, label):
+        rem = ['MSG']
+        msg = []
+        if label:
+            msg.append(label)
+        msg.append(event.summary.value.replace('[', '["["]'))
+
+        if hasattr(event, 'location') and event.location.value:
+            msg.append('at %s' % event.location.value)
+
+        if hasattr(event, 'description') and event.description.value:
+            rem.append('%%"%s%%"' % ' '.join(msg))
+            rem.append(event.description.value.replace('\n', '%_').replace('[', '["["]'))
+        else:
+            rem.append(' '.join(msg))
+
+        return rem
+
+    def to_remind(self, event, label=None, priority=None):
+        remind = ['REM']
+
+        if not hasattr(event, 'rdate'):
+            remind.append(event.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
+
+        if priority:
+            remind.append('PRIORITY %s' % priority)
+
+        if hasattr(event, 'rrule') and event.rruleset._rrule[0]._freq != 0:
+            remind.extend(Remind._parse_rruleset(event.rruleset))
+
+        duration = Remind._event_duration(event)
+
+        if type(event.dtstart.value) is date and duration.days > 1:
+            remind.append('*1')
+            if hasattr(event, 'dtend'):
+                event.dtend.value -= timedelta(days=1)
+                remind.append(event.dtend.value.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
+
+        if isinstance(event.dtstart.value, datetime):
+            remind.append(event.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
+            if duration.total_seconds() > 0:
+                remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
+
+        if hasattr(event, 'rdate'):
+            rdates = []
+            for rdate in event.rdate.value:
+                rdates.append(rdate.strftime("trigdate()=='%Y-%m-%d'"))
+            remind.append('SATISFY [%s]' % '||'.join(rdates))
+
+        remind.extend(Remind._gen_msg(event, label))
+
+        return ' '.join(remind) + '\n'
+
+    def to_reminds(self, ical, label=None, priority=None):
         reminders = []
         for event in ical.vevent_list:
-            remind = ['REM']
-
-            if not hasattr(event, 'rdate'):
-                remind.append(event.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
-
-            if priority:
-                remind.append('PRIORITY %s' % priority)
-
-            if hasattr(event, 'rrule') and event.rruleset._rrule[0]._freq != 0:
-                remind.extend(Remind._parse_rruleset(event.rruleset))
-
-            duration = Remind._event_duration(event)
-
-            if type(event.dtstart.value) is date and duration.days > 1:
-                remind.append('*1')
-                if hasattr(event, 'dtend'):
-                    event.dtend.value -= timedelta(days=1)
-                    remind.append(event.dtend.value.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
-
-            if isinstance(event.dtstart.value, datetime):
-                remind.append(event.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
-                if duration.total_seconds() > 0:
-                    remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
-
-            if hasattr(event, 'rdate'):
-                rdates = []
-                for rdate in event.rdate.value:
-                    rdates.append(rdate.strftime("trigdate()=='%Y-%m-%d'"))
-                remind.append('SATISFY [%s]' % '||'.join(rdates))
-
-            remind.append('MSG')
-            msg = []
-            if label:
-                msg.append(label)
-            msg.append(event.summary.value.replace('[', '["["]'))
-            if hasattr(event, 'location') and event.location.value:
-                msg.append('at %s' % event.location.value)
-            if hasattr(event, 'description') and event.description.value:
-                remind.append('%%"%s%%"' % ' '.join(msg))
-                remind.append(event.description.value.replace('\n', '%_').replace('[', '["["]'))
-            else:
-                remind.append(' '.join(msg))
-            reminders.append(' '.join(remind))
-            reminders.append('\n')
+            reminders.append(self.to_remind(event, label, priority))
         return ''.join(reminders)
 
     def append(self, ical, filename):
         if filename not in self._vevents:
             return
         self._lock.acquire()
-        copen(filename, 'a', encoding='utf-8').write(self.to_remind(readOne(ical)))
+        copen(filename, 'a', encoding='utf-8').write(self.to_reminds(readOne(ical)))
         self._lock.release()
 
     def remove(self, name, filename):
@@ -335,7 +346,7 @@ class Remind(object):
         rem = copen(filename, encoding='utf-8').readlines()
         linehash = sha1(rem[line].encode('utf-8')).hexdigest()
         if linehash == uid[1]:
-            rem[line] = self.to_remind(readOne(ical))
+            rem[line] = self.to_reminds(readOne(ical))
             copen(filename, 'w', encoding='utf-8').writelines(rem)
         self._lock.release()
 
@@ -395,5 +406,5 @@ def ics2rem():
     zone.zone = args.zone
 
     vobject = readOne(args.infile.read().decode('utf-8'))
-    rem = Remind(zone).to_remind(vobject, args.label, args.priority)
+    rem = Remind(zone).to_reminds(vobject, args.label, args.priority)
     args.outfile.write(rem.encode('utf-8'))
