@@ -29,7 +29,8 @@ from vobject import readOne, iCalendar
 
 class Remind(object):
 
-    def __init__(self, localtz, filename=expanduser('~/.reminders'), startdate=date.today()-timedelta(weeks=12), month=15):
+    def __init__(self, localtz, filename=expanduser('~/.reminders'),
+                 startdate=date.today()-timedelta(weeks=12), month=15):
         self._localtz = localtz
         self._filename = filename
         self._startdate = startdate
@@ -39,7 +40,9 @@ class Remind(object):
         self._mtime = 0
 
     def _parse_remind(self, filename, lines=''):
-        rem = Popen(['remind', '-l', '-s%d' % self._month, '-b1', '-r', filename, str(self._startdate)], stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
+        p = Popen(['remind', '-l', '-s%d' % self._month, '-b1', '-r',
+                   filename, str(self._startdate)], stdin=PIPE, stdout=PIPE)
+        rem = p.communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
 
         if len(rem) == 0:
             return {}
@@ -49,20 +52,22 @@ class Remind(object):
         for line in rem.split('\n#'):
             line = line.replace('\n', ' ').rstrip().split(' ')
 
-            if line[3] not in files:
+            src_filename = line[3]
+
+            if src_filename not in files:
                 if lines:
-                    files[line[3]] = lines.split('\n')
+                    files[src_filename] = lines.split('\n')
                 else:
-                    files[line[3]] = copen(line[3], encoding='utf-8').readlines()
-                events[line[3]] = {}
-            text = files[line[3]][int(line[2])-1]
+                    files[src_filename] = copen(src_filename, encoding='utf-8').readlines()
+                events[src_filename] = {}
+            text = files[src_filename][int(line[2])-1]
 
             event = self._parse_remind_line(line, text)
 
-            if event['uid'] in events[line[3]]:
-                events[line[3]][event['uid']]['dtstart'] += event['dtstart']
+            if event['uid'] in events[src_filename]:
+                events[src_filename][event['uid']]['dtstart'] += event['dtstart']
             else:
-                events[line[3]][event['uid']] = event
+                events[src_filename][event['uid']] = event
 
         vevents = {}
         for calendar in events:
@@ -76,7 +81,7 @@ class Remind(object):
         dat = [int(f) for f in line[4].split('/')]
         if line[8] != '*':
             start = divmod(int(line[8]), 60)
-            event['dtstart'] = [datetime(dat[0], dat[1], dat[2], start[0], start[1], tzinfo=self._localtz)]
+            event['dtstart'] = [_gen_dtstart(dat, start)]
             if line[7] != '*':
                 event['duration'] = timedelta(minutes=int(line[7]))
         else:
@@ -89,11 +94,22 @@ class Remind(object):
             event['msg'] = msg
 
         if '%"' in text:
-            event['description'] = text[text.rfind('%"')+3:].replace('%_', '\n').replace('["["]', '[').strip()
+            event['description'] = _gen_description(text)
 
-        event['uid'] = '%s-%s@%s' % (line[2], sha1(text.encode('utf-8')).hexdigest(), getfqdn())
+        event['uid'] = _gen_uid(line, text)
 
         return event
+
+    def _gen_dtstart(dat, start):
+        return datetime(dat[0], dat[1], dat[2], start[0], start[1],
+                        tzinfo=self.localtz)
+
+    def _gen_description(t):
+        return t[t.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
+
+    def _gen_uid(line, text):
+        utfshahex_text = sha1(text.encode('utf-8')).hexdigest()
+        return '%s-%s@%s' % (line[2], utfshahex_text, getfqdn())
 
     @staticmethod
     def weekly(dates):
@@ -198,6 +214,39 @@ class Remind(object):
         return ccal
 
     def to_remind(self, ical, label=None, priority=None):
+        def _has_rrule_freq_set(event):
+            return event.rruleset._rrule[0]._freq != 0
+
+        def _with_rrule_freq(event, rule):
+            return event.rruleset._rrule[0]._freq == rule
+
+        def _is_daily(event):
+            return _with_rrule_freq(event, rrule.DAILY)
+
+        def _is_weekly(event):
+            return _with_rrule_freq(event, rrule.WEEKLY)
+
+        def _by_weekday(event):
+            return event.rruleset._rrule[0]._byweekday
+
+        def _by_weekday_p(event, pred):
+            return _by_weekday(event) and pred(_by_weekday(event))
+
+        def _rrule_until(e):
+            return e.rruleset._rrule[0]._until
+
+        def _rrule_count(e):
+            return e.rruleset._rrule[0]._count
+
+        def _until_fmt(event, fmt):
+            return _rrule_until(event).strftime(fmt)
+
+        def _event_duration(e):
+            if hasattr(e, 'dtend'):
+                return e.dtend.value - e.dtstart.value
+            elif hasattr(e, 'duration') and e.duration.value:
+                return e.duration.value
+
         reminders = []
         for event in ical.vevent_list:
             remind = []
@@ -207,29 +256,26 @@ class Remind(object):
             if priority:
                 remind.append('PRIORITY %s' % priority)
 
-            if hasattr(event, 'rrule') and event.rruleset._rrule[0]._freq != 0:
-                if event.rruleset._rrule[0]._freq == rrule.DAILY or (event.rruleset._rrule[0]._byweekday and len(event.rruleset._rrule[0]._byweekday) > 1):
+            if hasattr(event, 'rrule') and _has_rrule_freq_set(event):
+                if _is_daily(event) or (_by_weekday_p(event, lambda x: x > 1)):
                     remind.append('*1')
-                elif event.rruleset._rrule[0]._freq == rrule.WEEKLY:
+                elif _is_weekly(event):
                     remind.append('*7')
                 #TODO MONTHLY, ..
                 else:
                     raise NotImplementedError
 
-                if event.rruleset._rrule[0]._byweekday and len(event.rruleset._rrule[0]._byweekday) > 1:
+                if _by_weekday_p(event, lambda x: x > 1):
                     daynums = set(range(7)) - set(event.rruleset._rrule[0]._byweekday)
                     weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
                     days = [weekdays[day] for day in daynums]
                     remind.append('SKIP OMIT %s' % ' '.join(days))
-                if event.rruleset._rrule[0]._until:
-                    remind.append(event.rruleset._rrule[0]._until.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
-                elif event.rruleset._rrule[0]._count:
+                if _rrule_until(event):
+                    remind.append(_until_fmt(event, 'UNTIL %b %d %Y').replace(' 0', ' '))
+                elif _rrule_count(event):
                     remind.append(event.rruleset[-1].strftime('UNTIL %b %d %Y').replace(' 0', ' '))
 
-            if hasattr(event, 'dtend'):
-                duration = event.dtend.value - event.dtstart.value
-            elif hasattr(event, 'duration') and event.duration.value:
-                duration = event.duration.value
+            duration = _event_duration(event)
 
             if type(event.dtstart.value) is date and duration.days > 1:
                 remind.append('*1')
@@ -308,11 +354,25 @@ def rem2ics():
     from sys import stdin, stdout
 
     parser = ArgumentParser(description='Converter from Remind to iCalendar syntax.')
-    parser.add_argument('-s', '--startdate', type=lambda s: parse(s).date(), default=date.today(), help='Start offset for remind call')
-    parser.add_argument('-m', '--month', type=int, default=15, help='Number of manth to generate calendar beginning wit stadtdate (default: 15)')
-    parser.add_argument('-z', '--zone', default='Europe/Berlin', help='Timezone of Remind file (default: Europe/Berlin)')
-    parser.add_argument('infile', nargs='?', default=expanduser('~/.reminders'), help='The Remind file to process (default: ~/.reminders)')
-    parser.add_argument('outfile', nargs='?', type=FileType('w'), default=stdout, help='Output iCalendar file (default: stdout)')
+
+    parser.add_argument('-s', '--startdate', type = lambda s: parse(s).date(),
+                        default = date.today(),
+                        help = 'Start offset for remind call')
+
+    parser.add_argument('-m', '--month', type = int, default = 15,
+                        help='Number of manth to generate calendar beginning wit stadtdate (default: 15)')
+
+    parser.add_argument('-z', '--zone', default='Europe/Berlin',
+                        help = 'Timezone of Remind file (default: Europe/Berlin)')
+
+    parser.add_argument('infile', nargs='?',
+                        default = expanduser('~/.reminders'),
+                        help = 'The Remind file to process (default: ~/.reminders)')
+
+    parser.add_argument('outfile', nargs='?', type = FileType('w'),
+                        default = stdout,
+                        help = 'Output iCalendar file (default: stdout)')
+
     args = parser.parse_args()
 
     zone = gettz(args.zone)
@@ -321,22 +381,36 @@ def rem2ics():
     zone.zone = args.zone
 
     if args.infile == '-':
-        vobject = Remind(zone, args.infile, startdate=args.startdate, month=args.month).stdin_to_vobject(stdin.read().decode('utf-8'))
+        r = Remind(zone, args.infile, startdate = args.startdate, month = args.month)
+        vobject = r.stdin_to_vobject(stdin.read().decode('utf-8'))
         if vobject:
             args.outfile.write(vobject.serialize())
     else:
-        args.outfile.write(Remind(zone, startdate=args.startdate, month=args.month).to_vobject_combined(args.infile).serialize())
+        r = Remind(zone, startdate=args.startdate, month=args.month)
+        vo = r.to_vobject_combined(args.infile).serialize()
+        args.outfile.write(vo)
 
 def ics2rem():
     from argparse import ArgumentParser, FileType
     from sys import stdin, stdout
 
-    parser = ArgumentParser(description='Converter from iCalendar to Remind syntax.')
-    parser.add_argument('-l', '--label', help='Label for every Remind entry')
-    parser.add_argument('-p', '--priority', type=int, help='Priority for every Remind entry (0..9999)')
-    parser.add_argument('-z', '--zone', default='Europe/Berlin', help='Timezone of Remind file (default: Europe/Berlin)')
-    parser.add_argument('infile', nargs='?', type=FileType('r'), default=stdin, help='Input iCalendar file (default: stdin)')
-    parser.add_argument('outfile', nargs='?', type=FileType('w'), default=stdout, help='Output Remind file (default: stdout)')
+    parser = ArgumentParser(description = 'Converter from iCalendar to Remind syntax.')
+    parser.add_argument('-l', '--label',
+                        help = 'Label for every Remind entry')
+
+    parser.add_argument('-p', '--priority', type = int,
+                        help = 'Priority for every Remind entry (0..9999)')
+
+    parser.add_argument('-z', '--zone', default = 'Europe/Berlin',
+                        help = 'Timezone of Remind file (default: Europe/Berlin)')
+    parser.add_argument('infile', nargs='?', type = FileType('r'),
+                        default = stdin,
+                        help = 'Input iCalendar file (default: stdin)')
+
+    parser.add_argument('outfile', nargs='?', type = FileType('w'),
+                        default = stdout,
+                        help = 'Output Remind file (default: stdout)')
+
     args = parser.parse_args()
 
     zone = gettz(args.zone)
@@ -344,4 +418,6 @@ def ics2rem():
     # (python-vobject tests for the zone attribute)
     zone.zone = args.zone
 
-    args.outfile.write(Remind(zone).to_remind(readOne(args.infile.read().decode('utf-8')), args.label, args.priority).encode('utf-8'))
+    read = readOne(args.infile.read().decode('utf-8'))
+    r = Remind(zone).to_remind(read, args.label, args.priority).encode('utf-8')
+    args.outfile.write(r)
