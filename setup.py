@@ -24,5 +24,4 @@ setup(name='remind',
               ]
           },
 
-      test_suite='nose.collector',
-     )
+      test_suite='nose.collector',)

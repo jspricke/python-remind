@@ -20,6 +20,7 @@
 from vobject import readComponents, iCalendar
 from argparse import ArgumentParser
 
+
 def compare(first_in, second_in, second_out):
     for (j, second) in enumerate(second_in.vevent_list):
         found = False
@@ -58,6 +59,7 @@ def compare(first_in, second_in, second_out):
             print "matching %d to %d" % (i, j)
         if not found:
             second_out.add(second)
+
 
 def main():
     parser = ArgumentParser(description='Compare two iCalendar files semantically')

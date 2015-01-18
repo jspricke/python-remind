@@ -22,6 +22,7 @@ from vobject import iCalendar
 from datetime import datetime, timedelta
 from dateutil import rrule
 
+
 def test_compare_simple():
     first = iCalendar()
     first.add('vevent')
@@ -34,6 +35,7 @@ def test_compare_simple():
     compare(first, second, second_out)
     assert len(first.contents) == 0
     assert len(second_out.contents) == 0
+
 
 def test_compare_vevent_summary():
     first = iCalendar()
@@ -49,6 +51,7 @@ def test_compare_vevent_summary():
     assert len(first.contents) == 0
     assert len(second_out.contents) == 0
 
+
 def test_compare_summary_diff1():
     first = iCalendar()
     first_vevent = first.add('vevent')
@@ -61,6 +64,7 @@ def test_compare_summary_diff1():
     compare(first, second, second_out)
     assert len(first.contents) == 1
     assert len(second_out.contents) == 1
+
 
 def test_compare_summary_diff2():
     first = iCalendar()
@@ -75,6 +79,7 @@ def test_compare_summary_diff2():
     assert len(first.contents) == 1
     assert len(second_out.contents) == 1
 
+
 def test_compare_summary_diff3():
     first = iCalendar()
     first_vevent = first.add('vevent')
@@ -88,6 +93,7 @@ def test_compare_summary_diff3():
     compare(first, second, second_out)
     assert len(first.contents) == 1
     assert len(second_out.contents) == 1
+
 
 def test_compare_dtend():
     first = iCalendar()
@@ -105,6 +111,7 @@ def test_compare_dtend():
     assert len(first.contents) == 0
     assert len(second_out.contents) == 0
 
+
 def test_compare_dtend_duration():
     first = iCalendar()
     first_vevent = first.add('vevent')
@@ -121,6 +128,7 @@ def test_compare_dtend_duration():
     assert len(first.contents) == 0
     assert len(second_out.contents) == 0
 
+
 def test_compare_dtend_duration_diff():
     first = iCalendar()
     first_vevent = first.add('vevent')
@@ -136,6 +144,7 @@ def test_compare_dtend_duration_diff():
     compare(first, second, second_out)
     assert len(first.contents) == 1
     assert len(second_out.contents) == 1
+
 
 def test_compare_rrule():
     first = iCalendar()
@@ -156,6 +165,7 @@ def test_compare_rrule():
     compare(first, second, second_out)
     assert len(first.contents) == 0
     assert len(second_out.contents) == 0
+
 
 def test_compare_rrule_diff():
     first = iCalendar()
