@@ -52,22 +52,22 @@ class Remind(object):
         for line in rem.split('\n#'):
             line = line.replace('\n', ' ').rstrip().split(' ')
 
-            thrd = line[3]
+            src_filename = line[3]
 
-            if thrd not in files:
+            if src_filename not in files:
                 if lines:
-                    files[thrd] = lines.split('\n')
+                    files[src_filename] = lines.split('\n')
                 else:
-                    files[thrd] = copen(thrd, encoding='utf-8').readlines()
-                events[thrd] = {}
-            text = files[thrd][int(line[2])-1]
+                    files[src_filename] = copen(src_filename, encoding='utf-8').readlines()
+                events[src_filename] = {}
+            text = files[src_filename][int(line[2])-1]
 
             event = self._parse_remind_line(line, text)
 
-            if event['uid'] in events[thrd]:
-                events[thrd][event['uid']]['dtstart'] += event['dtstart']
+            if event['uid'] in events[src_filename]:
+                events[src_filename][event['uid']]['dtstart'] += event['dtstart']
             else:
-                events[thrd][event['uid']] = event
+                events[src_filename][event['uid']] = event
 
         vevents = {}
         for calendar in events:
