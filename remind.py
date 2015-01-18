@@ -108,10 +108,8 @@ class Remind(object):
         return t[t.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
 
     def _gen_uid(line, text):
-        def utfshahex(t):
-            return sha1(t.encode('utf-8')).hexdigest()
-
-        return '%s-%s@%s' % (line[2], utfshahex(text), getfqdn())
+        utfshahex_text = sha1(text.encode('utf-8')).hexdigest()
+        return '%s-%s@%s' % (line[2], utfshahex_text, getfqdn())
 
     @staticmethod
     def weekly(dates):
