@@ -72,7 +72,7 @@ class Remind(object):
         for filename in events:
             icals[filename] = iCalendar()
             for event in events[filename].values():
-                Remind._gen_vevent(icals[filename], event)
+                Remind._gen_vevent(event, icals[filename].add('vevent'))
         return icals
 
     @staticmethod
@@ -151,8 +151,7 @@ class Remind(object):
                 vevent.add('dtend').value = dtstarts[0] + timedelta(days=1)
 
     @staticmethod
-    def _add_vevent(calendar, event):
-        vevent = calendar.add('vevent')
+    def _gen_vevent(event, vevent):
         vevent.add('dtstart').value = event['dtstart'][0]
         vevent.add('summary').value = event['msg']
         vevent.add('uid').value = event['uid']
