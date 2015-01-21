@@ -181,23 +181,17 @@ class Remind(object):
             Remind._gen_dtend_rrule(event['dtstart'], vevent)
 
     def _update(self):
-        update = False
-        if not self._icals:
-            update = True
-        else:
-            for fname in self._icals:
-                mtime = getmtime(fname)
-                if mtime > self._mtime:
-                    update = True
-                    break
+        update = not self._icals
+
+        for fname in self._icals:
+            mtime = getmtime(fname)
+            if mtime > self._mtime:
+                self._mtime = mtime
+                update = True
 
         if update:
             self._lock.acquire()
             self._icals = self._parse_remind(self._filename)
-            for fname in self._icals:
-                mtime = getmtime(fname)
-                if mtime > self._mtime:
-                    self._mtime = mtime
             self._lock.release()
 
     def get_filesnames(self):
