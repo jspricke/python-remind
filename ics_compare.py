@@ -2,7 +2,7 @@
 #
 # Python tool to compare two iCalendar files (specifically for python-remind)
 #
-# Copyright (C) 2014  Jochen Sprickerhof
+# Copyright (C) 2014-2015  Jochen Sprickerhof
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
