@@ -68,12 +68,12 @@ class Remind(object):
             else:
                 events[src_filename][event['uid']] = event
 
-        vevents = {}
-        for calendar in events:
-            vevents[calendar] = iCalendar()
-            for event in events[calendar].values():
-                Remind._add_vevent(vevents[calendar], event)
-        return vevents
+        icals = {}
+        for filename in events:
+            icals[filename] = iCalendar()
+            for event in events[filename].values():
+                Remind._gen_vevent(icals[filename], event)
+        return icals
 
     @staticmethod
     def _gen_description(text):
