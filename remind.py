@@ -36,7 +36,7 @@ class Remind(object):
         self._startdate = startdate
         self._month = month
         self._lock = Lock()
-        self._vevents = {}
+        self._icals = {}
         self._mtime = 0
 
     def _parse_remind(self, filename, lines=''):
@@ -182,10 +182,10 @@ class Remind(object):
 
     def _update(self):
         update = False
-        if not self._vevents:
+        if not self._icals:
             update = True
         else:
-            for fname in self._vevents:
+            for fname in self._icals:
                 mtime = getmtime(fname)
                 if mtime > self._mtime:
                     update = True
@@ -193,8 +193,8 @@ class Remind(object):
 
         if update:
             self._lock.acquire()
-            self._vevents = self._parse_remind(self._filename)
-            for fname in self._vevents:
+            self._icals = self._parse_remind(self._filename)
+            for fname in self._icals:
                 mtime = getmtime(fname)
                 if mtime > self._mtime:
                     self._mtime = mtime
@@ -202,11 +202,11 @@ class Remind(object):
 
     def get_filesnames(self):
         self._update()
-        return self._vevents.keys()
+        return self._icals.keys()
 
     def to_vobject(self, filename):
         self._update()
-        return self._vevents.get(filename, iCalendar())
+        return self._icals.get(filename, iCalendar())
 
     def stdin_to_vobject(self, lines):
         return self._parse_remind('-', lines).get('-')
@@ -314,14 +314,14 @@ class Remind(object):
         return ''.join(reminders)
 
     def append(self, ical, filename):
-        if filename not in self._vevents:
+        if filename not in self._icals:
             return
         self._lock.acquire()
         copen(filename, 'a', encoding='utf-8').write(self.to_reminds(readOne(ical)))
         self._lock.release()
 
     def remove(self, name, filename):
-        if filename not in self._vevents:
+        if filename not in self._icals:
             return
         uid = name.split('@')[0].split('-')
         if len(uid) != 2:
@@ -336,7 +336,7 @@ class Remind(object):
         self._lock.release()
 
     def replace(self, name, ical, filename):
-        if filename not in self._vevents:
+        if filename not in self._icals:
             return
         uid = name.split('@')[0].split('-')
         if len(uid) != 2:
