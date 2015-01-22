@@ -40,6 +40,9 @@ class Remind(object):
         self._mtime = 0
 
     def _parse_remind(self, filename, lines=''):
+        if lines:
+            filename = '-'
+
         cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-r', filename, str(self._startdate)]
         rem = Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
 
