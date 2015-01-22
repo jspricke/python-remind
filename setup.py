@@ -10,7 +10,14 @@ setup(name='remind',
       license='GPLv3+',
       url='https://github.com/jspricke/python-remind',
       keywords=['Remind'],
-      classifiers=['Programming Language :: Python'],
+      classifiers=[
+          'Programming Language :: Python',
+          'Development Status :: 4 - Beta'
+          'Environment :: Console',
+          'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+          'Topic :: Office/Business :: Scheduling',
+          'Topic :: Software Development :: Libraries :: Python Modules',
+          ],
 
       setup_requires=['nose>=1.3', 'coverage'],
       install_requires=['python-dateutil', 'vobject'],

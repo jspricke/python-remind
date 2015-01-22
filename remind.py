@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Python library to convert between Remind and iCalendar"""
 
 from codecs import open as copen
 from datetime import date, datetime, timedelta
@@ -28,9 +29,17 @@ from vobject import readOne, iCalendar
 
 
 class Remind(object):
+    """Represents a collection of Remind files"""
 
     def __init__(self, localtz, filename=expanduser('~/.reminders'),
                  startdate=date.today()-timedelta(weeks=12), month=15):
+        """Constructor
+
+        localtz -- the timezone of the remind file
+        filename -- the remind file (included files will be used as well)
+        startdate -- the date to start parsing, will be passed to remind
+        month -- how many month to parse, will be passed to remind -s
+        """
         self._localtz = localtz
         self._filename = filename
         self._startdate = startdate
@@ -40,6 +49,11 @@ class Remind(object):
         self._mtime = 0
 
     def _parse_remind(self, filename, lines=''):
+        """Calls remind and parses the output into a dict
+
+        filename -- the remind file (included files will be used as well)
+        lines -- use this as stdin to remind (filename will be ignored)
+        """
         if lines:
             filename = '-'
 
@@ -80,14 +94,23 @@ class Remind(object):
 
     @staticmethod
     def _gen_description(text):
+        """Convert from Remind MSG to iCal description
+        Opposite of _gen_msg()
+        """
         return text[text.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
 
     @staticmethod
     def _gen_uid(line_number, text):
+        """Generate iCal uid (line number, sha1(REM line), domain name)"""
         hashed_text = sha1(text.encode('utf-8')).hexdigest()
         return '%s-%s@%s' % (line_number, hashed_text, getfqdn())
 
     def _parse_remind_line(self, line, text):
+        """Parse a line of remind output into a dict
+
+        line -- the remind output
+        text -- the original remind input
+        """
         event = {}
         dat = [int(f) for f in line[4].split('/')]
         if line[8] != '*':
@@ -113,6 +136,7 @@ class Remind(object):
 
     @staticmethod
     def _weekly(dates):
+        """Checks if all dates are have a weekly distance"""
         last = dates[0]
         for dat in dates[1:]:
             if (dat - last).days != 7:
@@ -122,6 +146,7 @@ class Remind(object):
 
     @staticmethod
     def _gen_dtend_rrule(dtstarts, vevent):
+        """Generate an rdate or rrule from a list of dates and add it to the vevent"""
         if (max(dtstarts) - min(dtstarts)).days == len(dtstarts) - 1:
             if isinstance(dtstarts[0], datetime):
                 rset = rrule.rruleset()
@@ -156,6 +181,7 @@ class Remind(object):
 
     @staticmethod
     def _gen_vevent(event, vevent):
+        """Generate vevent from given event"""
         vevent.add('dtstart').value = event['dtstart'][0]
         vevent.add('summary').value = event['msg']
         vevent.add('uid').value = event['uid']
@@ -184,6 +210,7 @@ class Remind(object):
             Remind._gen_dtend_rrule(event['dtstart'], vevent)
 
     def _update(self):
+        """Reload Remind files if the mtime is newer"""
         update = not self._icals
 
         for fname in self._icals:
@@ -198,17 +225,21 @@ class Remind(object):
             self._lock.release()
 
     def get_filesnames(self):
+        """All filenames parsed by remind (including included files)"""
         self._update()
         return self._icals.keys()
 
     def to_vobject(self, filename):
+        """Return iCal object of the filename"""
         self._update()
         return self._icals.get(filename, iCalendar())
 
     def stdin_to_vobject(self, lines):
+        """Return iCal object of the Remind commands in lines"""
         return self._parse_remind('-', lines).get('-')
 
     def to_vobject_combined(self):
+        """Returns a Combined iCal of all Remind files"""
         self._update()
         ccal = iCalendar()
         for cal in self._icals.values():
@@ -224,6 +255,8 @@ class Remind(object):
 
     @staticmethod
     def _parse_rruleset(rruleset):
+        """Convert from iCal rrule to Remind recurrence syntax"""
+        # pylint: disable=protected-access
 
         if rruleset._rrule[0]._freq == 0:
             return []
@@ -253,6 +286,7 @@ class Remind(object):
 
     @staticmethod
     def _event_duration(vevent):
+        """unify dtend and duration to the duration of the given vevent"""
         if hasattr(vevent, 'dtend'):
             return vevent.dtend.value - vevent.dtstart.value
         elif hasattr(vevent, 'duration') and vevent.duration.value:
@@ -261,6 +295,9 @@ class Remind(object):
 
     @staticmethod
     def _gen_msg(vevent, label):
+        """Generate a Remind MSG from the given vevent.
+        Opposit of _gen_description()
+        """
         rem = ['MSG']
         msg = []
         if label:
@@ -279,6 +316,7 @@ class Remind(object):
         return rem
 
     def to_remind(self, vevent, label=None, priority=None):
+        """Generate a Remind command from the given vevent"""
         remind = ['REM']
 
         trigdates = None
@@ -317,41 +355,52 @@ class Remind(object):
         return ' '.join(remind) + '\n'
 
     def to_reminds(self, ical, label=None, priority=None):
+        """Return Remind commands for all events of a iCalendar"""
         reminders = [self.to_remind(vevent, label, priority) for vevent in ical.vevent_list]
         return ''.join(reminders)
 
     def append(self, ical, filename):
+        """Append a Remind command generated from the iCalendar to the file"""
         if filename not in self._icals:
             return
+
         self._lock.acquire()
         copen(filename, 'a', encoding='utf-8').write(self.to_reminds(readOne(ical)))
         self._lock.release()
 
     def remove(self, name, filename):
+        """Remove the Remind command with the name (uid) from the file"""
         if filename not in self._icals:
             return
+
         uid = name.split('@')[0].split('-')
         if len(uid) != 2:
             return
+
         line = int(uid[0]) - 1
         self._lock.acquire()
         rem = copen(filename, encoding='utf-8').readlines()
         linehash = sha1(rem[line].encode('utf-8')).hexdigest()
+
         if linehash == uid[1]:
             del rem[line]
             copen(filename, 'w', encoding='utf-8').writelines(rem)
         self._lock.release()
 
     def replace(self, name, ical, filename):
+        """Update the Remind command with the name (uid) in the file with the new iCalendar"""
         if filename not in self._icals:
             return
+
         uid = name.split('@')[0].split('-')
         if len(uid) != 2:
             return
+
         line = int(uid[0]) - 1
         self._lock.acquire()
         rem = copen(filename, encoding='utf-8').readlines()
         linehash = sha1(rem[line].encode('utf-8')).hexdigest()
+
         if linehash == uid[1]:
             rem[line] = self.to_reminds(readOne(ical))
             copen(filename, 'w', encoding='utf-8').writelines(rem)
@@ -359,6 +408,8 @@ class Remind(object):
 
 
 def rem2ics():
+    """Command line tool to convert from Remind to iCalendar"""
+    # pylint: disable=maybe-no-member
     from argparse import ArgumentParser, FileType
     from dateutil.parser import parse
     from sys import stdin, stdout
@@ -392,6 +443,7 @@ def rem2ics():
 
 
 def ics2rem():
+    """Command line tool to convert from iCalendar to Remind"""
     from argparse import ArgumentParser, FileType
     from sys import stdin, stdout
 
