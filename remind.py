@@ -217,6 +217,12 @@ class Remind(object):
         return ccal
 
     @staticmethod
+    def _parse_rdate(rdates):
+        """Convert from iCal rdate to Remind trigdate syntax"""
+        trigdates = [rdate.strftime("trigdate()=='%Y-%m-%d'") for rdate in rdates]
+        return 'SATISFY [%s]' % '||'.join(trigdates)
+
+    @staticmethod
     def _parse_rruleset(rruleset):
         rep = []
 
@@ -296,10 +302,7 @@ class Remind(object):
                 remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
 
         if hasattr(event, 'rdate'):
-            rdates = []
-            for rdate in event.rdate.value:
-                rdates.append(rdate.strftime("trigdate()=='%Y-%m-%d'"))
-            remind.append('SATISFY [%s]' % '||'.join(rdates))
+            remind.append(Remind._parse_rdate(event.rdate.value))
 
         remind.extend(Remind._gen_msg(event, label))
 
