@@ -235,9 +235,8 @@ class Remind(object):
             rep.append('*1')
         elif rruleset._rrule[0]._freq == rrule.WEEKLY:
             rep.append('*7')
-        # TODO MONTHLY, ..
         else:
-            raise NotImplementedError
+            return Remind._parse_rdate(rruleset._rrule[0])
 
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             daynums = set(range(7)) - set(rruleset._rrule[0]._byweekday)
@@ -282,14 +281,18 @@ class Remind(object):
     def to_remind(self, vevent, label=None, priority=None):
         remind = ['REM']
 
-        if not hasattr(vevent, 'rdate'):
+        trigdates = None
+        if hasattr(vevent, 'rrule'):
+            trigdates = Remind._parse_rruleset(vevent.rruleset)
+
+        if not hasattr(vevent, 'rdate') and not type(trigdates) is str:
             remind.append(vevent.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
 
         if priority:
             remind.append('PRIORITY %s' % priority)
 
-        if hasattr(vevent, 'rrule'):
-            remind.extend(Remind._parse_rruleset(vevent.rruleset))
+        if type(trigdates) is list:
+            remind.extend(trigdates)
 
         duration = Remind._event_duration(vevent)
 
@@ -306,6 +309,8 @@ class Remind(object):
 
         if hasattr(vevent, 'rdate'):
             remind.append(Remind._parse_rdate(vevent.rdate.value))
+        elif type(trigdates) is str:
+            remind.append(trigdates)
 
         remind.extend(Remind._gen_msg(vevent, label))
 
