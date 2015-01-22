@@ -253,61 +253,61 @@ class Remind(object):
         return rep
 
     @staticmethod
-    def _event_duration(event):
-        if hasattr(event, 'dtend'):
-            return event.dtend.value - event.dtstart.value
-        elif hasattr(event, 'duration') and event.duration.value:
-            return event.duration.value
+    def _event_duration(vevent):
+        if hasattr(vevent, 'dtend'):
+            return vevent.dtend.value - vevent.dtstart.value
+        elif hasattr(vevent, 'duration') and vevent.duration.value:
+            return vevent.duration.value
         return timedelta(0)
 
     @staticmethod
-    def _gen_msg(event, label):
+    def _gen_msg(vevent, label):
         rem = ['MSG']
         msg = []
         if label:
             msg.append(label)
-        msg.append(event.summary.value.replace('[', '["["]'))
+        msg.append(vevent.summary.value.replace('[', '["["]'))
 
-        if hasattr(event, 'location') and event.location.value:
-            msg.append('at %s' % event.location.value)
+        if hasattr(vevent, 'location') and vevent.location.value:
+            msg.append('at %s' % vevent.location.value)
 
-        if hasattr(event, 'description') and event.description.value:
+        if hasattr(vevent, 'description') and vevent.description.value:
             rem.append('%%"%s%%"' % ' '.join(msg))
-            rem.append(event.description.value.replace('\n', '%_').replace('[', '["["]'))
+            rem.append(vevent.description.value.replace('\n', '%_').replace('[', '["["]'))
         else:
             rem.append(' '.join(msg))
 
         return rem
 
-    def to_remind(self, event, label=None, priority=None):
+    def to_remind(self, vevent, label=None, priority=None):
         remind = ['REM']
 
-        if not hasattr(event, 'rdate'):
-            remind.append(event.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
+        if not hasattr(vevent, 'rdate'):
+            remind.append(vevent.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
 
         if priority:
             remind.append('PRIORITY %s' % priority)
 
-        if hasattr(event, 'rrule'):
-            remind.extend(Remind._parse_rruleset(event.rruleset))
+        if hasattr(vevent, 'rrule'):
+            remind.extend(Remind._parse_rruleset(vevent.rruleset))
 
-        duration = Remind._event_duration(event)
+        duration = Remind._event_duration(vevent)
 
-        if type(event.dtstart.value) is date and duration.days > 1:
+        if type(vevent.dtstart.value) is date and duration.days > 1:
             remind.append('*1')
-            if hasattr(event, 'dtend'):
-                event.dtend.value -= timedelta(days=1)
-                remind.append(event.dtend.value.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
+            if hasattr(vevent, 'dtend'):
+                vevent.dtend.value -= timedelta(days=1)
+                remind.append(vevent.dtend.value.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
 
-        if isinstance(event.dtstart.value, datetime):
-            remind.append(event.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
+        if isinstance(vevent.dtstart.value, datetime):
+            remind.append(vevent.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
             if duration.total_seconds() > 0:
                 remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
 
-        if hasattr(event, 'rdate'):
-            remind.append(Remind._parse_rdate(event.rdate.value))
+        if hasattr(vevent, 'rdate'):
+            remind.append(Remind._parse_rdate(vevent.rdate.value))
 
-        remind.extend(Remind._gen_msg(event, label))
+        remind.extend(Remind._gen_msg(vevent, label))
 
         return ' '.join(remind) + '\n'
 
