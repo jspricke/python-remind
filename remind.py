@@ -224,8 +224,11 @@ class Remind(object):
 
     @staticmethod
     def _parse_rruleset(rruleset):
-        rep = []
 
+        if rruleset._rrule[0]._freq == 0:
+            return []
+
+        rep = []
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             rep.append('*1')
         elif rruleset._rrule[0]._freq == rrule.DAILY:
@@ -285,7 +288,7 @@ class Remind(object):
         if priority:
             remind.append('PRIORITY %s' % priority)
 
-        if hasattr(event, 'rrule') and event.rruleset._rrule[0]._freq != 0:
+        if hasattr(event, 'rrule'):
             remind.extend(Remind._parse_rruleset(event.rruleset))
 
         duration = Remind._event_duration(event)
