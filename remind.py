@@ -306,9 +306,7 @@ class Remind(object):
         return ' '.join(remind) + '\n'
 
     def to_reminds(self, ical, label=None, priority=None):
-        reminders = []
-        for event in ical.vevent_list:
-            reminders.append(self.to_remind(event, label, priority))
+        reminders = [self.to_remind(vevent, label, priority) for vevent in ical.vevent_list]
         return ''.join(reminders)
 
     def append(self, ical, filename):
