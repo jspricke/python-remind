@@ -205,11 +205,12 @@ class Remind(object):
     def stdin_to_vobject(self, lines):
         return self._parse_remind('-', lines).get('-')
 
-    def to_vobject_combined(self, filename):
+    def to_vobject_combined(self):
+        self._update()
         ccal = iCalendar()
-        for cal in self._parse_remind(filename).values():
-            for event in cal.components():
-                ccal.add(event)
+        for cal in self._icals.values():
+            for vevent in cal.components():
+                ccal.add(vevent)
         return ccal
 
     @staticmethod
@@ -374,8 +375,8 @@ def rem2ics():
         if vobject:
             args.outfile.write(vobject.serialize())
     else:
-        remind = Remind(zone, startdate=args.startdate, month=args.month)
-        args.outfile.write(remind.to_vobject_combined(args.infile).serialize())
+        remind = Remind(zone, filename=args.infile, startdate=args.startdate, month=args.month)
+        args.outfile.write(remind.to_vobject_combined().serialize())
 
 
 def ics2rem():
