@@ -232,7 +232,7 @@ class Remind(object):
     def to_vobject(self, filename):
         """Return iCal object of the filename"""
         self._update()
-        return self._icals.get(filename, iCalendar())
+        return self._icals[filename]
 
     def stdin_to_vobject(self, lines):
         """Return iCal object of the Remind commands in lines"""
