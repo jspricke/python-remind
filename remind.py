@@ -302,14 +302,14 @@ class Remind(object):
         msg = []
         if label:
             msg.append(label)
-        msg.append(vevent.summary.value.replace('[', '["["]'))
+        msg.append(vevent.summary.value.strip().replace('[', '["["]'))
 
         if hasattr(vevent, 'location') and vevent.location.value:
-            msg.append('at %s' % vevent.location.value)
+            msg.append('at %s' % vevent.location.value.strip())
 
         if hasattr(vevent, 'description') and vevent.description.value:
             rem.append('%%"%s%%"' % ' '.join(msg))
-            rem.append(vevent.description.value.replace('\n', '%_').replace('[', '["["]'))
+            rem.append(vevent.description.value.strip().replace('\n', '%_').replace('[', '["["]'))
         else:
             rem.append(' '.join(msg))
 
