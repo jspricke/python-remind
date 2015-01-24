@@ -1,7 +1,14 @@
-# Python library to convert between Remind and iCalendar
+# Python Remind library
 
-[Remind](http://www.roaringpenguin.com/products/remind)
-Needs python-vobject library.
+Python library to convert between [Remind](http://www.roaringpenguin.com/products/remind) and iCalendar.
+Can be used stand alone (provided rem2ics and ics2rem tools) as well as integrated as a CalDAV client or server.
+
+# Installation
+
+Uses python-setuptools:
+```
+python setup.py install
+```
 
 ## How too set up a Remind CalDAV server
 
@@ -9,7 +16,7 @@ Have a look at [radicale-storage](http://github.com/jspricke/radicale-storage)
 
 ## How to sync to an external iCalendar server (http; cron)
 
-Use cur URL | ics2rem
+Use curl URL | ics2rem
 
 ## How to sync to an external CalDAV server
 
@@ -30,7 +37,6 @@ There is a similar program in python-vobject ``ics_diff.py``.
 ### iCalendar -> Remind
 
 - RECURRENCE-ID is not supported at the moment. This is a limitation of the used python-vobject library, see http://lists.skyhouseconsulting.com/pipermail/vobject/2009-September/000204.html.
-- RRULEs other then daily and weekly are not implemented.
 
 ### Remind -> iCalendar
 
