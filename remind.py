@@ -418,7 +418,7 @@ def rem2ics():
     parser.add_argument('-s', '--startdate', type=lambda s: parse(s).date(),
                         default=date.today(), help='Start offset for remind call')
     parser.add_argument('-m', '--month', type=int, default=15,
-                        help='Number of manth to generate calendar beginning wit stadtdate (default: 15)')
+                        help='Number of month to generate calendar beginning wit stadtdate (default: 15)')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
                         help='Timezone of Remind file (default: Europe/Berlin)')
     parser.add_argument('infile', nargs='?', default=expanduser('~/.reminders'),
