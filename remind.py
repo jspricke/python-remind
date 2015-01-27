@@ -31,12 +31,12 @@ from vobject import readOne, iCalendar
 class Remind(object):
     """Represents a collection of Remind files"""
 
-    def __init__(self, localtz, filename=expanduser('~/.reminders'),
+    def __init__(self, filename=expanduser('~/.reminders'), localtz=gettz(),
                  startdate=date.today()-timedelta(weeks=12), month=15):
         """Constructor
 
-        localtz -- the timezone of the remind file
         filename -- the remind file (included files will be used as well)
+        localtz -- the timezone of the remind file
         startdate -- the date to start parsing, will be passed to remind
         month -- how many month to parse, will be passed to remind -s
         """
@@ -433,13 +433,13 @@ def rem2ics():
     zone.zone = args.zone
 
     if args.infile == '-':
-        remind = Remind(zone, args.infile, startdate=args.startdate, month=args.month)
+        remind = Remind(args.infile, zone, args.startdate, args.month)
         vobject = remind.stdin_to_vobject(stdin.read().decode('utf-8'))
         if vobject:
             args.outfile.write(vobject.serialize())
     else:
-        remind = Remind(zone, filename=args.infile, startdate=args.startdate, month=args.month)
-        args.outfile.write(remind.to_vobject_combined().serialize())
+        remind = Remind(args.infile, zone, args.startdate, args.month)
+        args.outfile.write(remind.to_vobject().serialize())
 
 
 def ics2rem():
