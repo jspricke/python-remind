@@ -229,23 +229,22 @@ class Remind(object):
         self._update()
         return self._icals.keys()
 
-    def to_vobject(self, filename):
-        """Return iCal object of the filename"""
+    def to_vobject(self, filename=None):
+        """Return iCal object of all Remind files or the specified filename"""
         self._update()
-        return self._icals[filename]
 
-    def stdin_to_vobject(self, lines):
-        """Return iCal object of the Remind commands in lines"""
-        return self._parse_remind('-', lines).get('-')
+        if filename:
+            return self._icals[filename]
 
-    def to_vobject_combined(self):
-        """Returns a Combined iCal of all Remind files"""
-        self._update()
         ccal = iCalendar()
         for cal in self._icals.values():
             for vevent in cal.components():
                 ccal.add(vevent)
         return ccal
+
+    def stdin_to_vobject(self, lines):
+        """Return iCal object of the Remind commands in lines"""
+        return self._parse_remind('-', lines).get('-')
 
     @staticmethod
     def _parse_rdate(rdates):
@@ -465,5 +464,5 @@ def ics2rem():
     zone.zone = args.zone
 
     vobject = readOne(args.infile.read().decode('utf-8'))
-    rem = Remind(zone).to_reminds(vobject, args.label, args.priority)
+    rem = Remind(localtz=zone).to_reminds(vobject, args.label, args.priority)
     args.outfile.write(rem.encode('utf-8'))
