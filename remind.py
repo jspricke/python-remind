@@ -61,7 +61,7 @@ class Remind(object):
         rem = Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
 
         if len(rem) == 0:
-            return {}
+            return {filename: iCalendar()}
 
         events = {}
         files = {}
