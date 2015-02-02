@@ -236,6 +236,9 @@ class Remind(object):
         if filename:
             return self._icals[filename]
 
+        if len(self._icals) == 1:
+            return self._icals.values()[0]
+
         ccal = iCalendar()
         for cal in self._icals.values():
             for vevent in cal.components():
