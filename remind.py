@@ -20,7 +20,7 @@ from codecs import open as copen
 from datetime import date, datetime, timedelta
 from dateutil import rrule
 from dateutil.tz import gettz
-from hashlib import sha1
+from hashlib import md5
 from os.path import getmtime, expanduser
 from socket import getfqdn
 from subprocess import Popen, PIPE
@@ -57,7 +57,7 @@ class Remind(object):
         if lines:
             filename = '-'
 
-        cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-r', filename, str(self._startdate)]
+        cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r', filename, str(self._startdate)]
         rem = Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
 
         if len(rem) == 0:
@@ -99,12 +99,6 @@ class Remind(object):
         """
         return text[text.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
 
-    @staticmethod
-    def _gen_uid(line_number, text):
-        """Generate iCal uid (line number, sha1(REM line), domain name)"""
-        hashed_text = sha1(text.encode('utf-8')).hexdigest()
-        return '%s-%s@%s' % (line_number, hashed_text, getfqdn())
-
     def _parse_remind_line(self, line, text):
         """Parse a line of remind output into a dict
 
@@ -130,7 +124,7 @@ class Remind(object):
         if '%"' in text:
             event['description'] = Remind._gen_description(text)
 
-        event['uid'] = Remind._gen_uid(line[2], text)
+        event['uid'] = '%s@%s' % (line[6][8:], getfqdn())
 
         return event
 
@@ -220,14 +214,19 @@ class Remind(object):
                 update = True
 
         if update:
-            self._lock.acquire()
-            self._icals = self._parse_remind(self._filename)
-            self._lock.release()
+            with self._lock:
+                self._icals = self._parse_remind(self._filename)
 
     def get_filesnames(self):
         """All filenames parsed by remind (including included files)"""
         self._update()
         return self._icals.keys()
+
+    def get_uids(self, filename):
+        """UIDs of all reminders in the file"""
+        with self._lock:
+            rem = copen(filename, encoding='utf-8').readlines()
+            return ['%s@%s' % (md5(line.encode('utf-8')).hexdigest(), getfqdn()) for line in rem if line.startswith('REM')]
 
     def to_vobject(self, filename=None):
         """Return iCal object of all Remind files or the specified filename"""
@@ -366,48 +365,38 @@ class Remind(object):
         if filename not in self._icals:
             return
 
-        self._lock.acquire()
-        copen(filename, 'a', encoding='utf-8').write(self.to_reminds(readOne(ical)))
-        self._lock.release()
+        with self._lock:
+            copen(filename, 'a', encoding='utf-8').write(self.to_reminds(readOne(ical)))
 
     def remove(self, name, filename):
         """Remove the Remind command with the name (uid) from the file"""
         if filename not in self._icals:
             return
 
-        uid = name.split('@')[0].split('-')
-        if len(uid) != 2:
-            return
+        uid = name.split('@')[0]
 
-        line = int(uid[0]) - 1
-        self._lock.acquire()
-        rem = copen(filename, encoding='utf-8').readlines()
-        linehash = sha1(rem[line].encode('utf-8')).hexdigest()
-
-        if linehash == uid[1]:
-            del rem[line]
-            copen(filename, 'w', encoding='utf-8').writelines(rem)
-        self._lock.release()
+        with self._lock:
+            rem = copen(filename, encoding='utf-8').readlines()
+            for (index, line) in enumerate(rem):
+                if uid == md5(line.encode('utf-8')).hexdigest():
+                    del rem[index]
+                    copen(filename, 'w', encoding='utf-8').writelines(rem)
+                    break
 
     def replace(self, name, ical, filename):
         """Update the Remind command with the name (uid) in the file with the new iCalendar"""
         if filename not in self._icals:
             return
 
-        uid = name.split('@')[0].split('-')
-        if len(uid) != 2:
-            return
+        uid = name.split('@')[0]
 
-        line = int(uid[0]) - 1
-        self._lock.acquire()
-        rem = copen(filename, encoding='utf-8').readlines()
-        linehash = sha1(rem[line].encode('utf-8')).hexdigest()
-
-        if linehash == uid[1]:
-            rem[line] = self.to_reminds(readOne(ical))
-            copen(filename, 'w', encoding='utf-8').writelines(rem)
-        self._lock.release()
-
+        with self._lock:
+            rem = copen(filename, encoding='utf-8').readlines()
+            for (index, line) in enumerate(rem):
+                if uid == md5(line.encode('utf-8')).hexdigest():
+                    rem[index] = self.to_reminds(readOne(ical))
+                    copen(filename, 'w', encoding='utf-8').writelines(rem)
+                    break
 
 def rem2ics():
     """Command line tool to convert from Remind to iCalendar"""
