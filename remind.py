@@ -222,10 +222,10 @@ class Remind(object):
         self._update()
         return self._icals.keys()
 
-    def get_uids(self, filename):
-        """UIDs of all reminders in the file"""
+    def get_uids(self):
+        """UIDs of all reminders in the file excluding included files"""
         with self._lock:
-            rem = copen(filename, encoding='utf-8').readlines()
+            rem = copen(self._filename, encoding='utf-8').readlines()
             return ['%s@%s' % (md5(line.encode('utf-8')).hexdigest(), getfqdn()) for line in rem if line.startswith('REM')]
 
     def to_vobject(self, filename=None):
@@ -360,20 +360,24 @@ class Remind(object):
         reminders = [self.to_remind(vevent, label, priority) for vevent in ical.vevent_list]
         return ''.join(reminders)
 
-    def append(self, ical, filename):
+    def append(self, ical, filename=None):
         """Append a Remind command generated from the iCalendar to the file"""
-        if filename not in self._icals:
+        if not filename:
+            filename = self._filename
+        elif filename not in self._icals:
             return
 
         with self._lock:
             copen(filename, 'a', encoding='utf-8').write(self.to_reminders(readOne(ical)))
 
-    def remove(self, name, filename):
-        """Remove the Remind command with the name (uid) from the file"""
-        if filename not in self._icals:
+    def remove(self, uid, filename=None):
+        """Remove the Remind command with the uid from the file"""
+        if not filename:
+            filename = self._filename
+        elif filename not in self._icals:
             return
 
-        uid = name.split('@')[0]
+        uid = uid.split('@')[0]
 
         with self._lock:
             rem = copen(filename, encoding='utf-8').readlines()
