@@ -20,7 +20,8 @@ setup(name='remind',
           ],
 
       setup_requires=['nose>=1.3', 'coverage'],
-      install_requires=['python-dateutil', 'vobject'],
+      install_requires=['python-dateutil<2.4', # vobject is not compatible with dateutil 2.4
+                        'vobject'],
       py_modules=['remind', 'ics_compare'],
 
       entry_points={
