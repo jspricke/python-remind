@@ -355,7 +355,7 @@ class Remind(object):
 
         return ' '.join(remind) + '\n'
 
-    def to_reminds(self, ical, label=None, priority=None):
+    def to_reminders(self, ical, label=None, priority=None):
         """Return Remind commands for all events of a iCalendar"""
         reminders = [self.to_remind(vevent, label, priority) for vevent in ical.vevent_list]
         return ''.join(reminders)
@@ -366,7 +366,7 @@ class Remind(object):
             return
 
         with self._lock:
-            copen(filename, 'a', encoding='utf-8').write(self.to_reminds(readOne(ical)))
+            copen(filename, 'a', encoding='utf-8').write(self.to_reminders(readOne(ical)))
 
     def remove(self, name, filename):
         """Remove the Remind command with the name (uid) from the file"""
@@ -383,18 +383,20 @@ class Remind(object):
                     copen(filename, 'w', encoding='utf-8').writelines(rem)
                     break
 
-    def replace(self, name, ical, filename):
-        """Update the Remind command with the name (uid) in the file with the new iCalendar"""
-        if filename not in self._icals:
+    def replace(self, uid, ical, filename=None):
+        """Update the Remind command with the uid in the file with the new iCalendar"""
+        if not filename:
+            filename = self._filename
+        elif filename not in self._icals:
             return
 
-        uid = name.split('@')[0]
+        uid = uid.split('@')[0]
 
         with self._lock:
             rem = copen(filename, encoding='utf-8').readlines()
             for (index, line) in enumerate(rem):
                 if uid == md5(line.encode('utf-8')).hexdigest():
-                    rem[index] = self.to_reminds(readOne(ical))
+                    rem[index] = self.to_reminders(readOne(ical))
                     copen(filename, 'w', encoding='utf-8').writelines(rem)
                     break
 
@@ -456,5 +458,5 @@ def ics2rem():
     zone.zone = args.zone
 
     vobject = readOne(args.infile.read().decode('utf-8'))
-    rem = Remind(localtz=zone).to_reminds(vobject, args.label, args.priority)
+    rem = Remind(localtz=zone).to_reminders(vobject, args.label, args.priority)
     args.outfile.write(rem.encode('utf-8'))
