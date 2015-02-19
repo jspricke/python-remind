@@ -12,7 +12,7 @@ python setup.py install
 
 ## How too set up a Remind CalDAV server
 
-Have a look at [radicale-storage](http://github.com/jspricke/radicale-storage)
+Have a look at [radicale-remind](http://github.com/jspricke/radicale-remind)
 
 ## How to sync to an external iCalendar server (http; cron)
 

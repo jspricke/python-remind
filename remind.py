@@ -404,6 +404,7 @@ class Remind(object):
                     copen(filename, 'w', encoding='utf-8').writelines(rem)
                     break
 
+
 def rem2ics():
     """Command line tool to convert from Remind to iCalendar"""
     # pylint: disable=maybe-no-member
