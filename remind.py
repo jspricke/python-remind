@@ -124,7 +124,7 @@ class Remind(object):
         if '%"' in text:
             event['description'] = Remind._gen_description(text)
 
-        event['uid'] = '%s@%s' % (line[6][8:], getfqdn())
+        event['uid'] = '%s@%s' % (line[6][7:], getfqdn())
 
         return event
 
@@ -226,7 +226,7 @@ class Remind(object):
         """UIDs of all reminders in the file excluding included files"""
         with self._lock:
             rem = copen(self._filename, encoding='utf-8').readlines()
-            return ['%s@%s' % (md5(line.encode('utf-8')).hexdigest(), getfqdn()) for line in rem if line.startswith('REM')]
+            return ['%s@%s' % (md5(line[:-1].encode('utf-8')).hexdigest(), getfqdn()) for line in rem if line.startswith('REM')]
 
     def to_vobject(self, filename=None):
         """Return iCal object of all Remind files or the specified filename"""
@@ -382,7 +382,7 @@ class Remind(object):
         with self._lock:
             rem = copen(filename, encoding='utf-8').readlines()
             for (index, line) in enumerate(rem):
-                if uid == md5(line.encode('utf-8')).hexdigest():
+                if uid == md5(line[:-1].encode('utf-8')).hexdigest():
                     del rem[index]
                     copen(filename, 'w', encoding='utf-8').writelines(rem)
                     break
@@ -399,7 +399,7 @@ class Remind(object):
         with self._lock:
             rem = copen(filename, encoding='utf-8').readlines()
             for (index, line) in enumerate(rem):
-                if uid == md5(line.encode('utf-8')).hexdigest():
+                if uid == md5(line[:-1].encode('utf-8')).hexdigest():
                     rem[index] = self.to_reminders(readOne(ical))
                     copen(filename, 'w', encoding='utf-8').writelines(rem)
                     break
