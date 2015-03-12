@@ -10,6 +10,8 @@ Uses python-setuptools:
 python setup.py install
 ```
 
+You need to have the remind command line tool installed as well.
+
 ## How too set up a Remind CalDAV server
 
 Have a look at [radicale-remind](http://github.com/jspricke/radicale-remind)

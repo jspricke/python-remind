@@ -58,7 +58,10 @@ class Remind(object):
             filename = '-'
 
         cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r', filename, str(self._startdate)]
-        rem = Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
+        try:
+            rem = Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
+        except OSError:
+            raise OSError('Error running: %s' % ' '.join(cmd))
 
         if len(rem) == 0:
             return {filename: iCalendar()}
