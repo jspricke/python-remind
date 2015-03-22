@@ -133,7 +133,7 @@ class Remind(object):
 
     @staticmethod
     def _weekly(dates):
-        """Checks if all dates are have a weekly distance"""
+        """Checks if all dates have a weekly distance"""
         last = dates[0]
         for dat in dates[1:]:
             if (dat - last).days != 7:
@@ -300,7 +300,7 @@ class Remind(object):
     @staticmethod
     def _gen_msg(vevent, label):
         """Generate a Remind MSG from the given vevent.
-        Opposit of _gen_description()
+        Opposite of _gen_description()
         """
         rem = ['MSG']
         msg = []
