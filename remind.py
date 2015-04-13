@@ -127,7 +127,8 @@ class Remind(object):
         if '%"' in text:
             event['description'] = Remind._gen_description(text)
 
-        event['uid'] = '%s@%s' % (line[6][7:], getfqdn())
+        tags = line[6].split(',')
+        event['uid'] = '%s@%s' % (tags[-1][7:], getfqdn())
 
         return event
 
