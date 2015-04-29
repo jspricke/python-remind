@@ -351,7 +351,12 @@ class Remind(object):
                 remind.append(vevent.dtend.value.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
 
         if isinstance(vevent.dtstart.value, datetime):
-            remind.append(vevent.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
+            # If we don't get timezone information, handle it as a naive datetime.
+            # See https://github.com/jspricke/python-remind/issues/2 for reference.
+            if vevent.dtstart.value.tzinfo:
+                remind.append(vevent.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
+            else:
+                remind.append(vevent.dtstart.value.strftime('AT %H:%M').replace(' 0', ' '))
             if duration.total_seconds() > 0:
                 remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
 
