@@ -431,7 +431,7 @@ def rem2ics():
 
     parser = ArgumentParser(description='Converter from Remind to iCalendar syntax.')
     parser.add_argument('-s', '--startdate', type=lambda s: parse(s).date(),
-                        default=date.today(), help='Start offset for remind call')
+                        default=date.today()-timedelta(weeks=12), help='Start offset for remind call (default: -12 weeks)')
     parser.add_argument('-m', '--month', type=int, default=15,
                         help='Number of month to generate calendar beginning wit stadtdate (default: 15)')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
