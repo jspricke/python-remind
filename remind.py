@@ -128,8 +128,15 @@ class Remind(object):
             event['description'] = Remind._gen_description(text)
 
         tags = line[6].split(',')
-        if 'PUBLIC' in tags:
-            event['class'] = 'PUBLIC'
+
+        classes =  ['PUBLIC', 'PRIVATE', 'CONFIDENTIAL']
+
+        for tag in tags[:-1]:
+            if tag in classes:
+                event['class'] = tag
+
+        event['categories'] = [tag for tag in tags[:-1] if tag not in classes]
+
         event['uid'] = '%s@%s' % (tags[-1][7:], getfqdn())
 
         return event
@@ -188,6 +195,9 @@ class Remind(object):
 
         if 'class' in event:
             vevent.add('class').value = event['class']
+
+        if 'categories' in event and len(event['categories']) > 0:
+            vevent.add('categories').value = event['categories']
 
         if 'location' in event:
             vevent.add('location').value = event['location']
@@ -367,6 +377,11 @@ class Remind(object):
 
         if hasattr(vevent, 'class'):
             remind.append('TAG %s' % vevent.getChildValue('class'))
+
+        if hasattr(vevent, 'categories_list'):
+            for categories in vevent.categories_list:
+                for category in categories.value:
+                    remind.append('TAG %s' % category)
 
         remind.extend(Remind._gen_msg(vevent, label))
 
