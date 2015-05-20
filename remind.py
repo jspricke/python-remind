@@ -32,7 +32,7 @@ class Remind(object):
     """Represents a collection of Remind files"""
 
     def __init__(self, filename=expanduser('~/.reminders'), localtz=gettz(),
-                 startdate=date.today()-timedelta(weeks=12), month=15):
+                 startdate=date.today()-timedelta(weeks=12), month=15, alarm=timedelta(minutes=-10)):
         """Constructor
 
         filename -- the remind file (included files will be used as well)
@@ -47,6 +47,7 @@ class Remind(object):
         self._lock = Lock()
         self._icals = {}
         self._mtime = 0
+        self._alarm = alarm
 
     def _parse_remind(self, filename, lines=''):
         """Calls remind and parses the output into a dict
@@ -92,7 +93,7 @@ class Remind(object):
         for filename in events:
             icals[filename] = iCalendar()
             for event in events[filename].values():
-                Remind._gen_vevent(event, icals[filename].add('vevent'))
+                self._gen_vevent(event, icals[filename].add('vevent'))
         return icals
 
     @staticmethod
@@ -186,8 +187,7 @@ class Remind(object):
             if not isinstance(dtstarts[0], datetime):
                 vevent.add('dtend').value = dtstarts[0] + timedelta(days=1)
 
-    @staticmethod
-    def _gen_vevent(event, vevent):
+    def _gen_vevent(self, event, vevent):
         """Generate vevent from given event"""
         vevent.add('dtstart').value = event['dtstart'][0]
         vevent.add('summary').value = event['msg']
@@ -206,10 +206,11 @@ class Remind(object):
             vevent.add('description').value = event['description']
 
         if isinstance(event['dtstart'][0], datetime):
-            valarm = vevent.add('valarm')
-            valarm.add('trigger').value = timedelta(minutes=-10)
-            valarm.add('action').value = 'DISPLAY'
-            valarm.add('description').value = event['msg']
+            if self._alarm > timedelta():
+                valarm = vevent.add('valarm')
+                valarm.add('trigger').value = self._alarm
+                valarm.add('action').value = 'DISPLAY'
+                valarm.add('description').value = event['msg']
 
             if 'duration' in event:
                 vevent.add('duration').value = event['duration']
@@ -449,6 +450,8 @@ def rem2ics():
                         default=date.today()-timedelta(weeks=12), help='Start offset for remind call (default: -12 weeks)')
     parser.add_argument('-m', '--month', type=int, default=15,
                         help='Number of month to generate calendar beginning wit stadtdate (default: 15)')
+    parser.add_argument('-a', '--alarm', type=int, default=10,
+                        help='Trigger time for the alarm before the event in minutes (default: 10)')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
                         help='Timezone of Remind file (default: Europe/Berlin)')
     parser.add_argument('infile', nargs='?', default=expanduser('~/.reminders'),
@@ -463,12 +466,12 @@ def rem2ics():
     zone.zone = args.zone
 
     if args.infile == '-':
-        remind = Remind(args.infile, zone, args.startdate, args.month)
+        remind = Remind(args.infile, zone, args.startdate, args.month, timedelta(minutes=args.alarm))
         vobject = remind.stdin_to_vobject(stdin.read().decode('utf-8'))
         if vobject:
             args.outfile.write(vobject.serialize())
     else:
-        remind = Remind(args.infile, zone, args.startdate, args.month)
+        remind = Remind(args.infile, zone, args.startdate, args.month, timedelta(minutes=args.alarm))
         args.outfile.write(remind.to_vobject().serialize())
 
 
