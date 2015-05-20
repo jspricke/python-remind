@@ -3,7 +3,7 @@ from setuptools import setup
 setup(name='remind',
       version='0.5.1',
       description='''
-       Remind Python lib
+       Remind Python library
        ''',
       author='Jochen Sprickerhof',
       author_email='remind@jochen.sprickerhof.de',
