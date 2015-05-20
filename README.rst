@@ -7,8 +7,8 @@ Can be used stand alone (provided rem2ics and ics2rem tools) as well as integrat
 Installation
 ------------
 
-You need to have the Remind command tool installed.
-For Debian/Ubuntu you can do it like this::
+You need to have the Remind command line tool installed.
+For Debian/Ubuntu use::
 
   $ sudo apt-get install remind
 
