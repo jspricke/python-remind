@@ -12,19 +12,28 @@ python setup.py install
 
 You need to have the remind command line tool installed as well.
 
-## How too set up a Remind CalDAV server
+## Set up a Remind CalDAV server
 
 Have a look at [radicale-remind](http://github.com/jspricke/radicale-remind)
 
-## How to sync to an external iCalendar server (http; cron)
+## Sync to an external iCalendar server (http; cron)
 
 Use curl URL | ics2rem
 
-## How to sync to an external CalDAV server
+## Sync to an external CalDAV server
 
 Have a look at [remind-caldav](http://github.com/jspricke/remind-caldav)
 
-## Parsing of the Remind MSG body
+## Share your calendar using http
+
+rem2ics > /var/www/html/my.ics
+
+Publish the URL and use these guides to integrate it into other calendar software:
+- [Thunderbird/Lightning](http://mzl.la/1BsOArH) (Section: On the Network)
+- [Google Calendar](https://support.google.com/calendar/answer/37100)
+- [Apple Calendar](https://support.apple.com/kb/PH11523)
+
+## Format of the Remind MSG body
 
 `%" summary at location %" description`
 
