@@ -206,7 +206,7 @@ class Remind(object):
             vevent.add('description').value = event['description']
 
         if isinstance(event['dtstart'][0], datetime):
-            if self._alarm > timedelta():
+            if self._alarm != timedelta():
                 valarm = vevent.add('valarm')
                 valarm.add('trigger').value = self._alarm
                 valarm.add('action').value = 'DISPLAY'
@@ -450,8 +450,8 @@ def rem2ics():
                         default=date.today()-timedelta(weeks=12), help='Start offset for remind call (default: -12 weeks)')
     parser.add_argument('-m', '--month', type=int, default=15,
                         help='Number of month to generate calendar beginning wit stadtdate (default: 15)')
-    parser.add_argument('-a', '--alarm', type=int, default=10,
-                        help='Trigger time for the alarm before the event in minutes (default: 10)')
+    parser.add_argument('-a', '--alarm', type=int, default=-10,
+                        help='Trigger time for the alarm before the event in minutes (default: -10)')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
                         help='Timezone of Remind file (default: Europe/Berlin)')
     parser.add_argument('infile', nargs='?', default=expanduser('~/.reminders'),
