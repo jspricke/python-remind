@@ -37,7 +37,7 @@ Sync to an external iCalendar server (http; cron)
 
 ::
 
-  curl URL | ics2rem
+  curl URL | ics2rem >> ~/.reminders
 
 Sync to an external CalDAV server
 ---------------------------------
@@ -76,5 +76,5 @@ Remind -> iCalendar
 ~~~~~~~~~~~~~~~~~~~
 
 * Events are only evaluated in the given time frame, so events extending it, are cut of (birthday reminders for example).
-* Complex reminders are only preserved in their evaluated for (PUSH-OMIT-CONTEXT, OMIT, TRIGGER, BEFORE, SKIP).
-* Periodic reminders other then daily or weekly are not preserved
+* Complex reminders are only preserved in their evaluated form (PUSH-OMIT-CONTEXT, OMIT, TRIGGER, BEFORE, SKIP).
+* Periodic reminders other then daily or weekly are not preserved.
