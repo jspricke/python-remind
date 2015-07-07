@@ -69,18 +69,16 @@ class Remind(object):
 
         events = {}
         files = {}
-        for line in rem.split('\n#'):
-            line = line.replace('\n', ' ').rstrip().split(' ')
-
-            src_filename = line[3]
-
+        for line in rem.split('#'):
+            line = line.split(None, 9)
+            src_filename = line[2]
             if src_filename not in files:
                 if lines:
                     files[src_filename] = lines.split('\n')
                 else:
                     files[src_filename] = copen(src_filename, encoding='utf-8').readlines()
                 events[src_filename] = {}
-            text = files[src_filename][int(line[2])-1]
+            text = files[src_filename][int(line[1])-1]
 
             event = self._parse_remind_line(line, text)
 
@@ -110,16 +108,17 @@ class Remind(object):
         text -- the original remind input
         """
         event = {}
-        dat = [int(f) for f in line[4].split('/')]
-        if line[8] != '*':
-            start = divmod(int(line[8]), 60)
+        dat = [int(f) for f in line[3].split('/')]
+        if line[7] != '*':
+            start = divmod(int(line[7]), 60)
             event['dtstart'] = [datetime(dat[0], dat[1], dat[2], start[0], start[1], tzinfo=self._localtz)]
-            if line[7] != '*':
-                event['duration'] = timedelta(minutes=int(line[7]))
+            if line[6] != '*':
+                event['duration'] = timedelta(minutes=int(line[6]))
         else:
             event['dtstart'] = [date(dat[0], dat[1], dat[2])]
 
-        msg = ' '.join(line[9:] if line[8] == '*' else line[10:])
+        msg = ' '.join(line[8:]) if line[7] == '*' else line[9]
+        msg = msg.rstrip()
         if ' at ' in msg:
             (event['msg'], event['location']) = msg.rsplit(' at ', 1)
         else:
@@ -128,7 +127,7 @@ class Remind(object):
         if '%"' in text:
             event['description'] = Remind._gen_description(text)
 
-        tags = line[6].split(',')
+        tags = line[5].split(',')
 
         classes =  ['PUBLIC', 'PRIVATE', 'CONFIDENTIAL']
 
