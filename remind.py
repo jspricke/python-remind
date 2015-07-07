@@ -49,14 +49,35 @@ class Remind(object):
         self._mtime = 0
         self._alarm = alarm
 
+    @staticmethod
+    def _load_files(files, filename, lines=''):
+        """load content of Remind files and store it in the files dict
+           recursively include all included files as well
+
+        files -- dict mapping filenames to content
+        filename -- file to parse
+        lines -- used as stdin to remind (filename will be set to -)
+
+        """
+        if lines:
+            files[filename] = (lines.split('\n'), {})
+        else:
+            files[filename] = (copen(filename, encoding='utf-8').readlines(), {})
+        for line in files[filename][0]:
+            if line.startswith('include'):
+                Remind._load_files(files, line.split(' ')[1].strip())
+
     def _parse_remind(self, filename, lines=''):
         """Calls remind and parses the output into a dict
 
         filename -- the remind file (included files will be used as well)
-        lines -- use this as stdin to remind (filename will be ignored)
+        lines -- used as stdin to remind (filename will be set to -)
         """
         if lines:
             filename = '-'
+
+        files = {}
+        Remind._load_files(files, filename, lines)
 
         cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r', filename, str(self._startdate)]
         try:
@@ -64,33 +85,24 @@ class Remind(object):
         except OSError:
             raise OSError('Error running: %s' % ' '.join(cmd))
 
-        if len(rem) == 0:
-            return {filename: iCalendar()}
-
-        events = {}
-        files = {}
         for line in rem.split('#'):
+            if not line:
+                continue
+
             line = line.split(None, 9)
             src_filename = line[2]
-            if src_filename not in files:
-                if lines:
-                    files[src_filename] = lines.split('\n')
-                else:
-                    files[src_filename] = copen(src_filename, encoding='utf-8').readlines()
-                events[src_filename] = {}
-            text = files[src_filename][int(line[1])-1]
+            text = files[src_filename][0][int(line[1])-1]
 
             event = self._parse_remind_line(line, text)
-
-            if event['uid'] in events[src_filename]:
-                events[src_filename][event['uid']]['dtstart'] += event['dtstart']
+            if event['uid'] in files[src_filename][1]:
+                files[src_filename][1][event['uid']]['dtstart'] += event['dtstart']
             else:
-                events[src_filename][event['uid']] = event
+                files[src_filename][1][event['uid']] = event
 
         icals = {}
-        for filename in events:
+        for filename in files:
             icals[filename] = iCalendar()
-            for event in events[filename].values():
+            for event in files[filename][1].values():
                 self._gen_vevent(event, icals[filename].add('vevent'))
         return icals
 
