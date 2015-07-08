@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='remind',
-      version='0.5.3',
+      version='0.6.0',
       description='''
        Remind Python library
        ''',
