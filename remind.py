@@ -331,7 +331,11 @@ class Remind(object):
         msg = []
         if label:
             msg.append(label)
-        msg.append(vevent.summary.value.strip().replace('[', '["["]'))
+
+        if hasattr(vevent, 'summary') and vevent.summary.value:
+            msg.append(vevent.summary.value.strip().replace('[', '["["]'))
+        else:
+            msg.append('empty reminder')
 
         if hasattr(vevent, 'location') and vevent.location.value:
             msg.append('at %s' % vevent.location.value.strip())
