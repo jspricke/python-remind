@@ -132,7 +132,8 @@ class Remind(object):
             event['dtstart'] = [date(dat[0], dat[1], dat[2])]
 
         msg = ' '.join(line[8:]) if line[7] == '*' else line[9]
-        msg = msg.rstrip()
+        msg = msg.strip().replace('%_', '\n').replace('["["]', '[')
+
         if ' at ' in msg:
             (event['msg'], event['location']) = msg.rsplit(' at ', 1)
         else:
@@ -335,7 +336,7 @@ class Remind(object):
             msg.append(label)
 
         if hasattr(vevent, 'summary') and vevent.summary.value:
-            msg.append(vevent.summary.value.strip().replace('[', '["["]'))
+            msg.append(vevent.summary.value.strip())
         else:
             msg.append('empty reminder')
 
@@ -344,11 +345,11 @@ class Remind(object):
 
         if hasattr(vevent, 'description') and vevent.description.value:
             rem.append('%%"%s%%"' % ' '.join(msg))
-            rem.append(vevent.description.value.strip().replace('\n', '%_').replace('[', '["["]'))
+            rem.append(vevent.description.value.strip())
         else:
             rem.append(' '.join(msg))
 
-        return rem
+        return ' '.join(rem).replace('\n', '%_').replace('[', '["["]')
 
     def to_remind(self, vevent, label=None, priority=None):
         """Generate a Remind command from the given vevent"""
@@ -398,7 +399,7 @@ class Remind(object):
                 for category in categories.value:
                     remind.append('TAG %s' % category)
 
-        remind.extend(Remind._gen_msg(vevent, label))
+        remind.append(Remind._gen_msg(vevent, label))
 
         return ' '.join(remind) + '\n'
 
