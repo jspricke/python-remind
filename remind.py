@@ -32,7 +32,8 @@ class Remind(object):
     """Represents a collection of Remind files"""
 
     def __init__(self, filename=expanduser('~/.reminders'), localtz=gettz(),
-                 startdate=date.today()-timedelta(weeks=12), month=15, alarm=timedelta(minutes=-10)):
+                 startdate=date.today()-timedelta(weeks=12), month=15,
+                 alarm=timedelta(minutes=-10)):
         """Constructor
 
         filename -- the remind file (included files will be used as well)
@@ -79,7 +80,8 @@ class Remind(object):
         files = {}
         Remind._load_files(files, filename, lines)
 
-        cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r', filename, str(self._startdate)]
+        cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r',
+               filename, str(self._startdate)]
         try:
             rem = Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
         except OSError:
@@ -141,7 +143,7 @@ class Remind(object):
 
         tags = line[5].split(',')
 
-        classes =  ['PUBLIC', 'PRIVATE', 'CONFIDENTIAL']
+        classes = ['PUBLIC', 'PRIVATE', 'CONFIDENTIAL']
 
         for tag in tags[:-1]:
             if tag in classes:
@@ -459,7 +461,8 @@ def rem2ics():
 
     parser = ArgumentParser(description='Converter from Remind to iCalendar syntax.')
     parser.add_argument('-s', '--startdate', type=lambda s: parse(s).date(),
-                        default=date.today()-timedelta(weeks=12), help='Start offset for remind call (default: -12 weeks)')
+                        default=date.today()-timedelta(weeks=12),
+                        help='Start offset for remind call (default: -12 weeks)')
     parser.add_argument('-m', '--month', type=int, default=15,
                         help='Number of month to generate calendar beginning wit stadtdate (default: 15)')
     parser.add_argument('-a', '--alarm', type=int, default=-10,
