@@ -358,13 +358,13 @@ class Remind(object):
         if hasattr(vevent, 'rrule'):
             trigdates = Remind._parse_rruleset(vevent.rruleset)
 
-        if not hasattr(vevent, 'rdate') and not type(trigdates) is str:
+        if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str):
             remind.append(vevent.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
 
         if priority:
             remind.append('PRIORITY %s' % priority)
 
-        if type(trigdates) is list:
+        if isinstance(trigdates, list):
             remind.extend(trigdates)
 
         duration = Remind._event_duration(vevent)
@@ -387,7 +387,7 @@ class Remind(object):
 
         if hasattr(vevent, 'rdate'):
             remind.append(Remind._parse_rdate(vevent.rdate.value))
-        elif type(trigdates) is str:
+        elif isinstance(trigdates, str):
             remind.append(trigdates)
 
         if hasattr(vevent, 'class'):
