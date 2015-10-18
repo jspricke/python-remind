@@ -157,29 +157,35 @@ class Remind(object):
         return event
 
     @staticmethod
-    def _weekly(dates):
-        """Checks if all dates have a weekly distance"""
+    def _interval(dates):
+        """Return the distance between all dates and 0 if they are different"""
+        interval = (dates[1] - dates[0]).days
         last = dates[0]
         for dat in dates[1:]:
-            if (dat - last).days != 7:
-                return False
+            if (dat - last).days != interval:
+                return 0
             last = dat
-        return True
+        return interval
 
     @staticmethod
     def _gen_dtend_rrule(dtstarts, vevent):
         """Generate an rdate or rrule from a list of dates and add it to the vevent"""
-        if (max(dtstarts) - min(dtstarts)).days == len(dtstarts) - 1:
+        interval = Remind._interval(dtstarts)
+        if interval > 0 and interval % 7 == 0:
+            rset = rrule.rruleset()
+            rset.rrule(rrule.rrule(freq=rrule.WEEKLY, interval=interval/7, count=len(dtstarts)))
+            vevent.rruleset = rset
+        elif interval > 1:
+            rset = rrule.rruleset()
+            rset.rrule(rrule.rrule(freq=rrule.DAILY, interval=interval, count=len(dtstarts)))
+            vevent.rruleset = rset
+        elif interval > 0:
             if isinstance(dtstarts[0], datetime):
                 rset = rrule.rruleset()
                 rset.rrule(rrule.rrule(freq=rrule.DAILY, count=len(dtstarts)))
                 vevent.rruleset = rset
             else:
                 vevent.add('dtend').value = dtstarts[-1] + timedelta(days=1)
-        elif Remind._weekly(dtstarts):
-            rset = rrule.rruleset()
-            rset.rrule(rrule.rrule(freq=rrule.WEEKLY, count=len(dtstarts)))
-            vevent.rruleset = rset
         else:
             rset = rrule.rruleset()
             if isinstance(dtstarts[0], datetime):
@@ -297,9 +303,9 @@ class Remind(object):
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             rep.append('*1')
         elif rruleset._rrule[0]._freq == rrule.DAILY:
-            rep.append('*1')
+            rep.append('*%d' % rruleset._rrule[0]._interval)
         elif rruleset._rrule[0]._freq == rrule.WEEKLY:
-            rep.append('*7')
+            rep.append('*%d' % (7*rruleset._rrule[0]._interval))
         else:
             return Remind._parse_rdate(rruleset._rrule[0])
 
