@@ -87,13 +87,11 @@ class Remind(object):
         except OSError:
             raise OSError('Error running: %s' % ' '.join(cmd))
 
-        for line in rem.split('#'):
-            if not line:
-                continue
-
-            line = line.split(None, 9)
-            src_filename = line[2]
-            text = files[src_filename][0][int(line[1])-1]
+        rem = rem.splitlines()
+        for (fileinfo, line) in zip(rem[::2], rem[1::2]):
+            fileinfo = fileinfo.split()
+            src_filename = fileinfo[3]
+            text = files[src_filename][0][int(fileinfo[2])-1]
 
             event = self._parse_remind_line(line, text)
             if event['uid'] in files[src_filename][1]:
@@ -122,16 +120,17 @@ class Remind(object):
         text -- the original remind input
         """
         event = {}
-        dat = [int(f) for f in line[3].split('/')]
-        if line[7] != '*':
-            start = divmod(int(line[7]), 60)
+        line = line.split(None, 6)
+        dat = [int(f) for f in line[0].split('/')]
+        if line[4] != '*':
+            start = divmod(int(line[4]), 60)
             event['dtstart'] = [datetime(dat[0], dat[1], dat[2], start[0], start[1], tzinfo=self._localtz)]
-            if line[6] != '*':
-                event['duration'] = timedelta(minutes=int(line[6]))
+            if line[3] != '*':
+                event['duration'] = timedelta(minutes=int(line[3]))
         else:
             event['dtstart'] = [date(dat[0], dat[1], dat[2])]
 
-        msg = ' '.join(line[8:]) if line[7] == '*' else line[9]
+        msg = ' '.join(line[5:]) if line[4] == '*' else line[6]
         msg = msg.strip().replace('%_', '\n').replace('["["]', '[')
 
         if ' at ' in msg:
@@ -142,7 +141,7 @@ class Remind(object):
         if '%"' in text:
             event['description'] = Remind._gen_description(text)
 
-        tags = line[5].split(',')
+        tags = line[2].split(',')
 
         classes = ['PUBLIC', 'PRIVATE', 'CONFIDENTIAL']
 
