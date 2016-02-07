@@ -25,7 +25,7 @@ from os.path import getmtime, expanduser
 from socket import getfqdn
 from subprocess import Popen, PIPE
 from threading import Lock
-from vobject import readOne, iCalendar
+from card_me import readOne, iCalendar
 
 
 class Remind(object):
@@ -421,7 +421,8 @@ class Remind(object):
             return
 
         with self._lock:
-            copen(filename, 'a', encoding='utf-8').write(self.to_reminders(readOne(ical)))
+            outdat = self.to_reminders(readOne(ical))
+            copen(filename, 'a', encoding='utf-8').write(outdat.decode('utf-8'))
 
     def remove(self, uid, filename=None):
         """Remove the Remind command with the uid from the file"""
@@ -518,6 +519,6 @@ def ics2rem():
     # (python-vobject tests for the zone attribute)
     zone.zone = args.zone
 
-    vobject = readOne(args.infile.read().decode('utf-8'))
+    vobject = readOne(args.infile.read())
     rem = Remind(localtz=zone).to_reminders(vobject, args.label, args.priority)
-    args.outfile.write(rem.encode('utf-8'))
+    args.outfile.write(rem)
