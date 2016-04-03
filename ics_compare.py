@@ -56,7 +56,7 @@ def compare(first_in, second_in, second_out):
 
             found = True
             first_in.remove(first)
-            print "matching %d to %d" % (i, j)
+            print("matching %d to %d" % (i, j))
         if not found:
             second_out.add(second)
 
@@ -68,8 +68,8 @@ def main():
     parser.add_argument('first_output', help='First iCalendar file output')
     parser.add_argument('second_output', help='Second iCalendar file output')
     args = parser.parse_args()
-    first_cal = readComponents(open(args.first_input)).next()
-    second_cal = readComponents(open(args.second_input)).next()
+    first_cal = next(readComponents(open(args.first_input)))
+    second_cal = next(readComponents(open(args.second_input)))
     second_out = iCalendar()
 
     compare(first_cal, second_cal, second_out)

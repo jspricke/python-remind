@@ -16,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Python library to convert between Remind and iCalendar"""
 
-from codecs import open as copen
 from datetime import date, datetime, timedelta
 from dateutil import rrule
 from dateutil.tz import gettz
@@ -63,7 +62,7 @@ class Remind(object):
         if lines:
             files[filename] = (lines.split('\n'), {})
         else:
-            files[filename] = (copen(filename, encoding='utf-8').readlines(), {})
+            files[filename] = (open(filename).readlines(), {})
         for line in files[filename][0]:
             if line.startswith('include'):
                 Remind._load_files(files, line.split(' ')[1].strip())
@@ -172,7 +171,7 @@ class Remind(object):
         interval = Remind._interval(dtstarts)
         if interval > 0 and interval % 7 == 0:
             rset = rrule.rruleset()
-            rset.rrule(rrule.rrule(freq=rrule.WEEKLY, interval=interval/7, count=len(dtstarts)))
+            rset.rrule(rrule.rrule(freq=rrule.WEEKLY, interval=interval//7, count=len(dtstarts)))
             vevent.rruleset = rset
         elif interval > 1:
             rset = rrule.rruleset()
@@ -256,12 +255,12 @@ class Remind(object):
     def get_filesnames(self):
         """All filenames parsed by remind (including included files)"""
         self._update()
-        return self._icals.keys()
+        return list(self._icals.keys())
 
     def get_uids(self):
         """UIDs of all reminders in the file excluding included files"""
         with self._lock:
-            rem = copen(self._filename, encoding='utf-8').readlines()
+            rem = open(self._filename).readlines()
             return ['%s@%s' % (md5(line[:-1].encode('utf-8')).hexdigest(), getfqdn()) for line in rem if line.startswith('REM')]
 
     def to_vobject(self, filename=None):
@@ -272,7 +271,7 @@ class Remind(object):
             return self._icals[filename]
 
         if len(self._icals) == 1:
-            return self._icals.values()[0]
+            return list(self._icals.values())[0]
 
         ccal = iCalendar()
         for cal in self._icals.values():
@@ -429,7 +428,7 @@ class Remind(object):
 
         with self._lock:
             outdat = self.to_reminders(readOne(ical))
-            copen(filename, 'a', encoding='utf-8').write(outdat.decode('utf-8'))
+            open(filename, 'a').write(outdat)
 
     def remove(self, uid, filename=None):
         """Remove the Remind command with the uid from the file"""
@@ -441,11 +440,11 @@ class Remind(object):
         uid = uid.split('@')[0]
 
         with self._lock:
-            rem = copen(filename, encoding='utf-8').readlines()
+            rem = open(filename).readlines()
             for (index, line) in enumerate(rem):
                 if uid == md5(line[:-1].encode('utf-8')).hexdigest():
                     del rem[index]
-                    copen(filename, 'w', encoding='utf-8').writelines(rem)
+                    open(filename, 'w').writelines(rem)
                     break
 
     def replace(self, uid, ical, filename=None):
@@ -458,11 +457,11 @@ class Remind(object):
         uid = uid.split('@')[0]
 
         with self._lock:
-            rem = copen(filename, encoding='utf-8').readlines()
+            rem = open(filename).readlines()
             for (index, line) in enumerate(rem):
                 if uid == md5(line[:-1].encode('utf-8')).hexdigest():
                     rem[index] = self.to_reminders(readOne(ical))
-                    copen(filename, 'w', encoding='utf-8').writelines(rem)
+                    open(filename, 'w').writelines(rem)
                     break
 
 
@@ -496,7 +495,7 @@ def rem2ics():
 
     if args.infile == '-':
         remind = Remind(args.infile, zone, args.startdate, args.month, timedelta(minutes=args.alarm))
-        vobject = remind.stdin_to_vobject(stdin.read().decode('utf-8'))
+        vobject = remind.stdin_to_vobject(stdin.read())
         if vobject:
             args.outfile.write(vobject.serialize())
     else:
