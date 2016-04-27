@@ -356,7 +356,7 @@ class Remind(object):
 
         return ' '.join(rem).replace('\n', '%_').replace('[', '["["]')
 
-    def to_remind(self, vevent, label=None, priority=None):
+    def to_remind(self, vevent, label=None, priority=None, tags=None):
         """Generate a Remind command from the given vevent"""
         remind = ['REM']
 
@@ -399,6 +399,9 @@ class Remind(object):
         if hasattr(vevent, 'class'):
             remind.append('TAG %s' % vevent.getChildValue('class'))
 
+        if tags:
+            remind.extend(['TAG %s' % tag for tag in tags])
+
         if hasattr(vevent, 'categories_list'):
             for categories in vevent.categories_list:
                 for category in categories.value:
@@ -408,9 +411,10 @@ class Remind(object):
 
         return ' '.join(remind) + '\n'
 
-    def to_reminders(self, ical, label=None, priority=None):
+    def to_reminders(self, ical, label=None, priority=None, tags=None):
         """Return Remind commands for all events of a iCalendar"""
-        reminders = [self.to_remind(vevent, label, priority) for vevent in ical.vevent_list]
+        reminders = [self.to_remind(vevent, label, priority, tags)
+                        for vevent in ical.vevent_list]
         return ''.join(reminders)
 
     def append(self, ical, filename=None):
@@ -506,6 +510,8 @@ def ics2rem():
     parser.add_argument('-l', '--label', help='Label for every Remind entry')
     parser.add_argument('-p', '--priority', type=int,
                         help='Priority for every Remind entry (0..9999)')
+    parser.add_argument('-t', '--tag', action='append',
+                        help='Tag(s) for every Remind entry')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
                         help='Timezone of Remind file (default: Europe/Berlin)')
     parser.add_argument('infile', nargs='?', type=FileType('r'), default=stdin,
@@ -520,5 +526,6 @@ def ics2rem():
     zone.zone = args.zone
 
     vobject = readOne(args.infile.read())
-    rem = Remind(localtz=zone).to_reminders(vobject, args.label, args.priority)
+    rem = Remind(localtz=zone).to_reminders(
+        vobject, args.label, args.priority, args.tag)
     args.outfile.write(rem)
