@@ -413,6 +413,9 @@ class Remind(object):
 
     def to_reminders(self, ical, label=None, priority=None, tags=None):
         """Return Remind commands for all events of a iCalendar"""
+        if not hasattr(ical, 'vevent_list'):
+            return ''
+
         reminders = [self.to_remind(vevent, label, priority, tags)
                         for vevent in ical.vevent_list]
         return ''.join(reminders)
