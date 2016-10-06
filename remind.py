@@ -395,17 +395,19 @@ class Remind(object):
         elif isinstance(trigdates, str):
             remind.append(trigdates)
 
+        def abbr_tag(tag):
+            return tag.replace(" ", "")[:48]
+
         if hasattr(vevent, 'class'):
-            remind.append('TAG %s' %
-                          vevent.getChildValue('class').replace(" ", "")[:48])
+            remind.append('TAG %s' % abbr_tag(vevent.getChildValue('class')))
 
         if tags:
-            remind.extend(['TAG %s' % tag for tag in tags])
+            remind.extend(['TAG %s' % abbr_tag(tag) for tag in tags])
 
         if hasattr(vevent, 'categories_list'):
             for categories in vevent.categories_list:
                 for category in categories.value:
-                    remind.append('TAG %s' % category)
+                    remind.append('TAG %s' % abbr_tag(category))
 
         remind.append(Remind._gen_msg(vevent, label))
 
