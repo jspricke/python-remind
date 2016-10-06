@@ -396,7 +396,8 @@ class Remind(object):
             remind.append(trigdates)
 
         if hasattr(vevent, 'class'):
-            remind.append('TAG %s' % vevent.getChildValue('class'))
+            remind.append('TAG %s' %
+                          vevent.getChildValue('class').replace(" ", "")[:48])
 
         if tags:
             remind.extend(['TAG %s' % tag for tag in tags])
