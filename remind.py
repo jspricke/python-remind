@@ -355,6 +355,11 @@ class Remind(object):
 
         return ' '.join(rem).replace('\n', '%_').replace('[', '["["]')
 
+    @staticmethod
+    def _abbr_tag(tag):
+        """Transform a string so it's acceptable as a remind tag. """
+        return tag.replace(" ", "")[:48]
+
     def to_remind(self, vevent, label=None, priority=None, tags=None):
         """Generate a Remind command from the given vevent"""
         remind = ['REM']
@@ -395,19 +400,16 @@ class Remind(object):
         elif isinstance(trigdates, str):
             remind.append(trigdates)
 
-        def abbr_tag(tag):
-            return tag.replace(" ", "")[:48]
-
         if hasattr(vevent, 'class'):
-            remind.append('TAG %s' % abbr_tag(vevent.getChildValue('class')))
+            remind.append('TAG %s' % Remind._abbr_tag(vevent.getChildValue('class')))
 
         if tags:
-            remind.extend(['TAG %s' % abbr_tag(tag) for tag in tags])
+            remind.extend(['TAG %s' % Remind._abbr_tag(tag) for tag in tags])
 
         if hasattr(vevent, 'categories_list'):
             for categories in vevent.categories_list:
                 for category in categories.value:
-                    remind.append('TAG %s' % abbr_tag(category))
+                    remind.append('TAG %s' % Remind._abbr_tag(category))
 
         remind.append(Remind._gen_msg(vevent, label))
 
