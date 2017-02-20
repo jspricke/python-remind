@@ -330,7 +330,7 @@ class Remind(object):
         return timedelta(0)
 
     @staticmethod
-    def _gen_msg(vevent, label):
+    def _gen_msg(vevent, label, tail, sep):
         """Generate a Remind MSG from the given vevent.
         Opposite of _gen_description()
         """
@@ -340,28 +340,50 @@ class Remind(object):
             msg.append(label)
 
         if hasattr(vevent, 'summary') and vevent.summary.value:
-            msg.append(vevent.summary.value.strip())
+            msg.append(Remind._rem_clean(vevent.summary.value))
         else:
             msg.append('empty reminder')
 
         if hasattr(vevent, 'location') and vevent.location.value:
-            msg.append('at %s' % vevent.location.value.strip())
+            msg.append('at %s' % Remind._rem_clean(vevent.location.value))
 
-        if hasattr(vevent, 'description') and vevent.description.value:
+        has_desc = hasattr(vevent, 'description') and vevent.description.value
+
+        if tail or has_desc:
             rem.append('%%"%s%%"' % ' '.join(msg))
-            rem.append(vevent.description.value.strip())
         else:
             rem.append(' '.join(msg))
+        if tail:
+            rem.append(tail)
 
-        return ' '.join(rem).replace('\n', '%_').replace('[', '["["]')
+        out = ' '.join(rem)
+        if has_desc:
+            out += sep + Remind._rem_clean(vevent.description.value)
+
+        return out
 
     @staticmethod
     def _abbr_tag(tag):
-        """Transform a string so it's acceptable as a remind tag. """
+        """Transform a string so it's acceptable as a remind tag."""
         return tag.replace(" ", "")[:48]
 
-    def to_remind(self, vevent, label=None, priority=None, tags=None):
-        """Generate a Remind command from the given vevent"""
+    @staticmethod
+    def _rem_clean(rem):
+        """Transform newlines and '[' in string."""
+        return rem.strip().replace('\n', '%_').replace('[', '["["]')
+
+    def to_remind(self, vevent, **kwargs):
+        """Generate a Remind command from the given vevent
+        Allowable kwargs are:
+            label:    gets prepended to every MSG
+            tail:     gets appended to every MSG summary, after the %"
+            sep:      separates the MSG summary and tail from the description
+            delta:    delta for a REM command
+            tdelta:   delta for the time component of a REM command
+            trepeat:  repeat for the time component of a REM command
+            priority: priority for every message
+            tag:      list of tags for the message
+        """
         remind = ['REM']
 
         trigdates = None
@@ -371,8 +393,11 @@ class Remind(object):
         if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str):
             remind.append(vevent.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
 
-        if priority:
-            remind.append('PRIORITY %s' % priority)
+        if kwargs.get('delta'):
+            remind.append(kwargs['delta'])
+
+        if kwargs.get('priority'):
+            remind.append('PRIORITY %s' % kwargs['priority'])
 
         if isinstance(trigdates, list):
             remind.extend(trigdates)
@@ -392,6 +417,12 @@ class Remind(object):
                 remind.append(vevent.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
             else:
                 remind.append(vevent.dtstart.value.strftime('AT %H:%M').replace(' 0', ' '))
+
+            if kwargs.get('tdelta'):
+                remind.append(kwargs['tdelta'])
+                if kwargs.get('trepeat'):
+                    remind.append(kwargs['trepeat'])
+
             if duration.total_seconds() > 0:
                 remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
 
@@ -403,25 +434,28 @@ class Remind(object):
         if hasattr(vevent, 'class'):
             remind.append('TAG %s' % Remind._abbr_tag(vevent.getChildValue('class')))
 
-        if tags:
-            remind.extend(['TAG %s' % Remind._abbr_tag(tag) for tag in tags])
+        if kwargs.get('tag'):
+            remind.extend(['TAG %s' % Remind._abbr_tag(t)
+                               for t in kwargs['tag']])
 
         if hasattr(vevent, 'categories_list'):
             for categories in vevent.categories_list:
                 for category in categories.value:
                     remind.append('TAG %s' % Remind._abbr_tag(category))
 
-        remind.append(Remind._gen_msg(vevent, label))
+        remind.append(Remind._gen_msg(
+            vevent, kwargs.get('label'), kwargs.get('tail'),
+            kwargs.get('sep', ' ')))
 
         return ' '.join(remind) + '\n'
 
-    def to_reminders(self, ical, label=None, priority=None, tags=None):
+    def to_reminders(self, ical, **kwargs):
         """Return Remind commands for all events of a iCalendar"""
         if not hasattr(ical, 'vevent_list'):
             return ''
 
-        reminders = [self.to_remind(vevent, label, priority, tags)
-                        for vevent in ical.vevent_list]
+        reminders = [self.to_remind(vevent, **kwargs)
+                         for vevent in ical.vevent_list]
         return ''.join(reminders)
 
     def append(self, ical, filename=None):
@@ -515,6 +549,12 @@ def ics2rem():
 
     parser = ArgumentParser(description='Converter from iCalendar to Remind syntax.')
     parser.add_argument('-l', '--label', help='Label for every Remind entry')
+    parser.add_argument('--tail', help='Tail for every Remind entry')
+    parser.add_argument('--sep', default=' ',
+                        help='String to separate summary from description')
+    parser.add_argument('--delta', help='delta for Remind date')
+    parser.add_argument('--tdelta', help='delta for Remind time')
+    parser.add_argument('--trepeat', help='repeat for Remind time')
     parser.add_argument('-p', '--priority', type=int,
                         help='Priority for every Remind entry (0..9999)')
     parser.add_argument('-t', '--tag', action='append',
@@ -533,6 +573,5 @@ def ics2rem():
     zone.zone = args.zone
 
     vobject = readOne(args.infile.read())
-    rem = Remind(localtz=zone).to_reminders(
-        vobject, args.label, args.priority, args.tag)
+    rem = Remind(localtz=zone).to_reminders(vobject, **vars(args))
     args.outfile.write(rem)
