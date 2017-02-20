@@ -372,9 +372,18 @@ class Remind(object):
         """Transform newlines and '[' in string."""
         return rem.strip().replace('\n', '%_').replace('[', '["["]')
 
-    def to_remind(self, vevent, label=None, tail=None, sep=" ", delta=None,
-                  tdelta=None, trepeat=None, priority=None, tags=None):
-        """Generate a Remind command from the given vevent"""
+    def to_remind(self, vevent, **kwargs):
+        """Generate a Remind command from the given vevent
+        Allowable kwargs are:
+            label:    gets prepended to every MSG
+            tail:     gets appended to every MSG summary, after the %"
+            sep:      separates the MSG summary and tail from the description
+            delta:    delta for a REM command
+            tdelta:   delta for the time component of a REM command
+            trepeat:  repeat for the time component of a REM command
+            priority: priority for every message
+            tag:      list of tags for the message
+        """
         remind = ['REM']
 
         trigdates = None
@@ -384,11 +393,11 @@ class Remind(object):
         if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str):
             remind.append(vevent.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
 
-        if delta:
-            remind.append(delta)
+        if kwargs.get('delta'):
+            remind.append(kwargs['delta'])
 
-        if priority:
-            remind.append('PRIORITY %s' % priority)
+        if kwargs.get('priority'):
+            remind.append('PRIORITY %s' % kwargs['priority'])
 
         if isinstance(trigdates, list):
             remind.extend(trigdates)
@@ -409,10 +418,10 @@ class Remind(object):
             else:
                 remind.append(vevent.dtstart.value.strftime('AT %H:%M').replace(' 0', ' '))
 
-            if tdelta:
-                remind.append(tdelta)
-                if trepeat:
-                    remind.append(trepeat)
+            if kwargs.get('tdelta'):
+                remind.append(kwargs['tdelta'])
+                if kwargs.get('trepeat'):
+                    remind.append(kwargs['trepeat'])
 
             if duration.total_seconds() > 0:
                 remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
@@ -425,27 +434,28 @@ class Remind(object):
         if hasattr(vevent, 'class'):
             remind.append('TAG %s' % Remind._abbr_tag(vevent.getChildValue('class')))
 
-        if tags:
-            remind.extend(['TAG %s' % Remind._abbr_tag(tag) for tag in tags])
+        if kwargs.get('tag'):
+            remind.extend(['TAG %s' % Remind._abbr_tag(t)
+                               for t in kwargs['tag']])
 
         if hasattr(vevent, 'categories_list'):
             for categories in vevent.categories_list:
                 for category in categories.value:
                     remind.append('TAG %s' % Remind._abbr_tag(category))
 
-        remind.append(Remind._gen_msg(vevent, label, tail, sep))
+        remind.append(Remind._gen_msg(
+            vevent, kwargs.get('label'), kwargs.get('tail'),
+            kwargs.get('sep', ' ')))
 
         return ' '.join(remind) + '\n'
 
-    def to_reminders(self, ical, label=None, tail=None, sep=" ", delta=None,
-                     tdelta=None, trepeat=None, priority=None, tags=None):
+    def to_reminders(self, ical, **kwargs):
         """Return Remind commands for all events of a iCalendar"""
         if not hasattr(ical, 'vevent_list'):
             return ''
 
-        reminders = [self.to_remind(vevent, label, tail, sep, delta, tdelta,
-                                    trepeat, priority, tags)
-                        for vevent in ical.vevent_list]
+        reminders = [self.to_remind(vevent, **kwargs)
+                         for vevent in ical.vevent_list]
         return ''.join(reminders)
 
     def append(self, ical, filename=None):
@@ -539,12 +549,12 @@ def ics2rem():
 
     parser = ArgumentParser(description='Converter from iCalendar to Remind syntax.')
     parser.add_argument('-l', '--label', help='Label for every Remind entry')
-    parser.add_argument('--tail',        help='Tail for every Remind entry')
+    parser.add_argument('--tail', help='Tail for every Remind entry')
     parser.add_argument('--sep', default=' ',
                         help='String to separate summary from description')
-    parser.add_argument('--delta',       help='delta for Remind date')
-    parser.add_argument('--tdelta',      help='delta for Remind time')
-    parser.add_argument('--trepeat',     help='repeat for Remind time')
+    parser.add_argument('--delta', help='delta for Remind date')
+    parser.add_argument('--tdelta', help='delta for Remind time')
+    parser.add_argument('--trepeat', help='repeat for Remind time')
     parser.add_argument('-p', '--priority', type=int,
                         help='Priority for every Remind entry (0..9999)')
     parser.add_argument('-t', '--tag', action='append',
@@ -563,7 +573,5 @@ def ics2rem():
     zone.zone = args.zone
 
     vobject = readOne(args.infile.read())
-    rem = Remind(localtz=zone).to_reminders(
-        vobject, args.label, args.tail, args.sep, args.delta, args.tdelta,
-        args.trepeat, args.priority, args.tag)
+    rem = Remind(localtz=zone).to_reminders(vobject, **vars(args))
     args.outfile.write(rem)
