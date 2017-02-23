@@ -374,7 +374,7 @@ class Remind(object):
         return tag.replace(" ", "")[:48]
 
     def to_remind(self, vevent, label=None, priority=None, tags=None, tail=None,
-                  sep=" "):
+                  sep=" ", postdate=None):
         """Generate a Remind command from the given vevent"""
         remind = ['REM']
 
@@ -396,6 +396,9 @@ class Remind(object):
 
         if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str):
             remind.append(dtstart.strftime('%b %d %Y').replace(' 0', ' '))
+
+        if postdate:
+            remind.append(postdate)
 
         if priority:
             remind.append('PRIORITY %s' % priority)
@@ -437,12 +440,13 @@ class Remind(object):
         return ' '.join(remind) + '\n'
 
     def to_reminders(self, ical, label=None, priority=None, tags=None,
-                     tail=None, sep=" "):
+                     tail=None, sep=" ", postdate=None):
         """Return Remind commands for all events of a iCalendar"""
         if not hasattr(ical, 'vevent_list'):
             return ''
 
-        reminders = [self.to_remind(vevent, label, priority, tags, tail, sep)
+        reminders = [self.to_remind(vevent, label, priority, tags, tail, sep,
+                                    postdate)
                         for vevent in ical.vevent_list]
         return ''.join(reminders)
 
@@ -545,6 +549,9 @@ def ics2rem():
                         help='Text to append to every remind summary, following final %%"')
     parser.add_argument('--sep', default=" ",
                         help='String to separate summary (and tail) from description')
+    parser.add_argument('--postdate',
+                        help='String to follow the date in every Remind entry. '
+                        'Useful for entering "back" and "delta" fields (see man remind).')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
                         help='Timezone of Remind file (default: Europe/Berlin)')
     parser.add_argument('infile', nargs='?', type=FileType('r'), default=stdin,
@@ -560,5 +567,6 @@ def ics2rem():
 
     vobject = readOne(args.infile.read())
     rem = Remind(localtz=zone).to_reminders(
-        vobject, args.label, args.priority, args.tag, args.tail, args.sep)
+        vobject, args.label, args.priority, args.tag, args.tail, args.sep,
+        args.postdate)
     args.outfile.write(rem)
