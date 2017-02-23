@@ -330,7 +330,7 @@ class Remind(object):
         return timedelta(0)
 
     @staticmethod
-    def _gen_msg(vevent, label):
+    def _gen_msg(vevent, label, tail, sep):
         """Generate a Remind MSG from the given vevent.
         Opposite of _gen_description()
         """
@@ -347,11 +347,18 @@ class Remind(object):
         if hasattr(vevent, 'location') and vevent.location.value:
             msg.append('at %s' % Remind._rem_clean(vevent.location.value))
 
-        if hasattr(vevent, 'description') and vevent.description.value:
+        has_desc = hasattr(vevent, 'description') and vevent.description.value
+
+        if tail or has_desc:
             rem.append('%%"%s%%"' % ' '.join(msg))
-            rem.append(Remind._rem_clean(vevent.description.value))
         else:
             rem.append(' '.join(msg))
+
+        if tail:
+            rem.append(tail)
+
+        if has_desc:
+            rem[-1] += sep + Remind._rem_clean(vevent.description.value)
 
         return ' '.join(rem)
 
@@ -366,7 +373,8 @@ class Remind(object):
         """Transform a string so it's acceptable as a remind tag. """
         return tag.replace(" ", "")[:48]
 
-    def to_remind(self, vevent, label=None, priority=None, tags=None):
+    def to_remind(self, vevent, label=None, priority=None, tags=None, tail=None,
+                  sep=" "):
         """Generate a Remind command from the given vevent"""
         remind = ['REM']
 
@@ -417,16 +425,17 @@ class Remind(object):
                 for category in categories.value:
                     remind.append('TAG %s' % Remind._abbr_tag(category))
 
-        remind.append(Remind._gen_msg(vevent, label))
+        remind.append(Remind._gen_msg(vevent, label, tail, sep))
 
         return ' '.join(remind) + '\n'
 
-    def to_reminders(self, ical, label=None, priority=None, tags=None):
+    def to_reminders(self, ical, label=None, priority=None, tags=None,
+                     tail=None, sep=" "):
         """Return Remind commands for all events of a iCalendar"""
         if not hasattr(ical, 'vevent_list'):
             return ''
 
-        reminders = [self.to_remind(vevent, label, priority, tags)
+        reminders = [self.to_remind(vevent, label, priority, tags, tail, sep)
                         for vevent in ical.vevent_list]
         return ''.join(reminders)
 
@@ -525,6 +534,10 @@ def ics2rem():
                         help='Priority for every Remind entry (0..9999)')
     parser.add_argument('-t', '--tag', action='append',
                         help='Tag(s) for every Remind entry')
+    parser.add_argument('--tail',
+                        help='Text to append to every remind summary, following final %%"')
+    parser.add_argument('--sep', default=" ",
+                        help='String to separate summary (and tail) from description')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
                         help='Timezone of Remind file (default: Europe/Berlin)')
     parser.add_argument('infile', nargs='?', type=FileType('r'), default=stdin,
@@ -540,5 +553,5 @@ def ics2rem():
 
     vobject = readOne(args.infile.read())
     rem = Remind(localtz=zone).to_reminders(
-        vobject, args.label, args.priority, args.tag)
+        vobject, args.label, args.priority, args.tag, args.tail, args.sep)
     args.outfile.write(rem)
