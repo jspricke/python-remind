@@ -340,20 +340,26 @@ class Remind(object):
             msg.append(label)
 
         if hasattr(vevent, 'summary') and vevent.summary.value:
-            msg.append(vevent.summary.value.strip())
+            msg.append(Remind._rem_clean(vevent.summary.value))
         else:
             msg.append('empty reminder')
 
         if hasattr(vevent, 'location') and vevent.location.value:
-            msg.append('at %s' % vevent.location.value.strip())
+            msg.append('at %s' % Remind._rem_clean(vevent.location.value))
 
         if hasattr(vevent, 'description') and vevent.description.value:
             rem.append('%%"%s%%"' % ' '.join(msg))
-            rem.append(vevent.description.value.strip())
+            rem.append(Remind._rem_clean(vevent.description.value))
         else:
             rem.append(' '.join(msg))
 
-        return ' '.join(rem).replace('\n', '%_').replace('[', '["["]')
+        return ' '.join(rem)
+
+    @staticmethod
+    def _rem_clean(rem):
+        """Strip, transform newlines, and escape '[' in string so it's
+        acceptable as a remind entry."""
+        return rem.strip().replace('\n', '%_').replace('[', '["["]')
 
     @staticmethod
     def _abbr_tag(tag):
