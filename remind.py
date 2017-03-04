@@ -368,8 +368,20 @@ class Remind(object):
         if hasattr(vevent, 'rrule'):
             trigdates = Remind._parse_rruleset(vevent.rruleset)
 
+        dtstart = vevent.dtstart.value
+        # If we don't get timezone information, handle it as a naive datetime.
+        # See https://github.com/jspricke/python-remind/issues/2 for reference.
+        if isinstance(dtstart, datetime) and dtstart.tzinfo:
+            dtstart = dtstart.astimezone(self._localtz)
+
+        dtend = None
+        if hasattr(vevent, 'dtend'):
+            dtend = vevent.dtend.value
+        if isinstance(dtend, datetime) and dtend.tzinfo:
+            dtend = dtend.astimezone(self._localtz)
+
         if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str):
-            remind.append(vevent.dtstart.value.strftime('%b %d %Y').replace(' 0', ' '))
+            remind.append(dtstart.strftime('%b %d %Y').replace(' 0', ' '))
 
         if priority:
             remind.append('PRIORITY %s' % priority)
@@ -379,19 +391,14 @@ class Remind(object):
 
         duration = Remind._event_duration(vevent)
 
-        if type(vevent.dtstart.value) is date and duration.days > 1:
+        if isinstance(dtstart, date) and duration.days > 1:
             remind.append('*1')
-            if hasattr(vevent, 'dtend'):
-                vevent.dtend.value -= timedelta(days=1)
-                remind.append(vevent.dtend.value.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
+            if dtend is not None:
+                dtend -= timedelta(days=1)
+                remind.append(dtend.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
 
-        if isinstance(vevent.dtstart.value, datetime):
-            # If we don't get timezone information, handle it as a naive datetime.
-            # See https://github.com/jspricke/python-remind/issues/2 for reference.
-            if vevent.dtstart.value.tzinfo:
-                remind.append(vevent.dtstart.value.astimezone(self._localtz).strftime('AT %H:%M').replace(' 0', ' '))
-            else:
-                remind.append(vevent.dtstart.value.strftime('AT %H:%M').replace(' 0', ' '))
+        if isinstance(dtstart, datetime):
+            remind.append(dtstart.strftime('AT %H:%M').replace(' 0', ' '))
             if duration.total_seconds() > 0:
                 remind.append('DURATION %d:%02d' % divmod(duration.total_seconds() / 60, 60))
 
