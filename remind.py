@@ -45,7 +45,7 @@ class Remind(object):
         self._startdate = startdate
         self._month = month
         self._lock = Lock()
-        self._icals = {}
+        self._reminders = {}
         self._mtime = 0
         self._alarm = alarm
 
@@ -86,24 +86,21 @@ class Remind(object):
         except OSError:
             raise OSError('Error running: %s' % ' '.join(cmd))
 
+        reminders = {}
         rem = rem.splitlines()
+        for filename in files:
+            reminders[filename] = {}
         for (fileinfo, line) in zip(rem[::2], rem[1::2]):
             fileinfo = fileinfo.split()
             src_filename = fileinfo[3]
             text = files[src_filename][0][int(fileinfo[2]) - 1]
 
             event = self._parse_remind_line(line, text)
-            if event['uid'] in files[src_filename][1]:
-                files[src_filename][1][event['uid']]['dtstart'] += event['dtstart']
+            if event['uid'] in reminders[src_filename]:
+                reminders[src_filename][event['uid']]['dtstart'] += event['dtstart']
             else:
-                files[src_filename][1][event['uid']] = event
-
-        icals = {}
-        for filename in files:
-            icals[filename] = iCalendar()
-            for event in files[filename][1].values():
-                self._gen_vevent(event, icals[filename].add('vevent'))
-        return icals
+                reminders[src_filename][event['uid']] = event
+        return reminders
 
     @staticmethod
     def _gen_description(text):
@@ -240,9 +237,9 @@ class Remind(object):
 
     def _update(self):
         """Reload Remind files if the mtime is newer"""
-        update = not self._icals
+        update = not self._reminders
 
-        for fname in self._icals:
+        for fname in self._reminders:
             mtime = getmtime(fname)
             if mtime > self._mtime:
                 self._mtime = mtime
@@ -250,12 +247,12 @@ class Remind(object):
 
         if update:
             with self._lock:
-                self._icals = self._parse_remind(self._filename)
+                self._reminders = self._parse_remind(self._filename)
 
     def get_filesnames(self):
         """All filenames parsed by remind (including included files)"""
         self._update()
-        return list(self._icals.keys())
+        return list(self._reminders.keys())
 
     @staticmethod
     def _get_uid(line):
@@ -268,25 +265,35 @@ class Remind(object):
             rem = open(self._filename).readlines()
             return [Remind._get_uid(line) for line in rem if line.startswith('REM')]
 
-    def to_vobject(self, filename=None):
-        """Return iCal object of all Remind files or the specified filename"""
+    def to_vobject(self, filename=None, uid=None):
+        """Return iCal object of Remind lines
+        If filename and UID are specified, the vObject only contains that event.
+        If only a filename is specified, the vObject contains all events in the file.
+        Otherwise the vObject contains all all objects of all files associated with the Remind object.
+
+        filename -- the remind file
+        uid -- the UID of the Remind line
+        """
         self._update()
 
-        if filename:
-            return self._icals[filename]
-
-        if len(self._icals) == 1:
-            return list(self._icals.values())[0]
-
-        ccal = iCalendar()
-        for cal in self._icals.values():
-            for vevent in cal.components():
-                ccal.add(vevent)
-        return ccal
+        cal = iCalendar()
+        if uid:
+            self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
+        elif filename:
+            for event in self._reminders[filename]:
+                self._gen_vevent(event, cal.add('vevent'))
+        else:
+            for filename in self._reminders:
+                for event in self._reminders[filename].values():
+                    self._gen_vevent(event, cal.add('vevent'))
+        return cal
 
     def stdin_to_vobject(self, lines):
         """Return iCal object of the Remind commands in lines"""
-        return self._parse_remind('-', lines).get('-')
+        cal = iCalendar()
+        for event in self._parse_remind('-', lines)['-'].values():
+            self._gen_vevent(event, cal.add('vevent'))
+        return cal
 
     @staticmethod
     def _parse_rdate(rdates):
@@ -463,7 +470,7 @@ class Remind(object):
         """Append a Remind command generated from the iCalendar to the file"""
         if not filename:
             filename = self._filename
-        elif filename not in self._icals:
+        elif filename not in self._reminders:
             return
 
         with self._lock:
@@ -476,7 +483,7 @@ class Remind(object):
         """Remove the Remind command with the uid from the file"""
         if not filename:
             filename = self._filename
-        elif filename not in self._icals:
+        elif filename not in self._reminders:
             return
 
         uid = uid.split('@')[0]
@@ -493,7 +500,7 @@ class Remind(object):
         """Update the Remind command with the uid in the file with the new iCalendar"""
         if not filename:
             filename = self._filename
-        elif filename not in self._icals:
+        elif filename not in self._reminders:
             return
 
         uid = uid.split('@')[0]
