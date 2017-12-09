@@ -20,7 +20,7 @@ setup(name='remind',
           ],
 
       setup_requires=['nose>=1.3', 'coverage'],
-      install_requires=['python-dateutil', 'python-card-me'],
+      install_requires=['python-dateutil', 'vobject'],
       py_modules=['remind', 'ics_compare'],
 
       entry_points={

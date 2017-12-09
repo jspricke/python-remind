@@ -24,7 +24,7 @@ from os.path import getmtime, expanduser
 from socket import getfqdn
 from subprocess import Popen, PIPE
 from threading import Lock
-from card_me import readOne, iCalendar
+from vobject import readOne, iCalendar
 
 
 class Remind(object):
