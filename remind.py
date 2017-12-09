@@ -470,6 +470,8 @@ class Remind(object):
             outdat = self.to_reminders(readOne(ical))
             open(filename, 'a').write(outdat)
 
+        return Remind._get_uid(outdat)
+
     def remove(self, uid, filename=None):
         """Remove the Remind command with the uid from the file"""
         if not filename:
