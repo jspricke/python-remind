@@ -1,6 +1,6 @@
 # Python library to convert between Remind and iCalendar
 #
-# Copyright (C) 2013-2015  Jochen Sprickerhof
+# Copyright (C) 2013-2017  Jochen Sprickerhof
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ class Remind(object):
     """Represents a collection of Remind files"""
 
     def __init__(self, filename=expanduser('~/.reminders'), localtz=gettz(),
-                 startdate=date.today()-timedelta(weeks=12), month=15,
+                 startdate=date.today() - timedelta(weeks=12), month=15,
                  alarm=timedelta(minutes=-10)):
         """Constructor
 
@@ -90,7 +90,7 @@ class Remind(object):
         for (fileinfo, line) in zip(rem[::2], rem[1::2]):
             fileinfo = fileinfo.split()
             src_filename = fileinfo[3]
-            text = files[src_filename][0][int(fileinfo[2])-1]
+            text = files[src_filename][0][int(fileinfo[2]) - 1]
 
             event = self._parse_remind_line(line, text)
             if event['uid'] in files[src_filename][1]:
@@ -171,7 +171,7 @@ class Remind(object):
         interval = Remind._interval(dtstarts)
         if interval > 0 and interval % 7 == 0:
             rset = rrule.rruleset()
-            rset.rrule(rrule.rrule(freq=rrule.WEEKLY, interval=interval//7, count=len(dtstarts)))
+            rset.rrule(rrule.rrule(freq=rrule.WEEKLY, interval=interval // 7, count=len(dtstarts)))
             vevent.rruleset = rset
         elif interval > 1:
             rset = rrule.rruleset()
@@ -303,7 +303,7 @@ class Remind(object):
         elif rruleset._rrule[0]._freq == rrule.DAILY:
             rep.append('*%d' % rruleset._rrule[0]._interval)
         elif rruleset._rrule[0]._freq == rrule.WEEKLY:
-            rep.append('*%d' % (7*rruleset._rrule[0]._interval))
+            rep.append('*%d' % (7 * rruleset._rrule[0]._interval))
         else:
             return Remind._parse_rdate(rruleset._rrule[0])
 
@@ -451,7 +451,7 @@ class Remind(object):
 
         reminders = [self.to_remind(vevent, label, priority, tags, tail, sep,
                                     postdate, posttime)
-                        for vevent in ical.vevent_list]
+                     for vevent in ical.vevent_list]
         return ''.join(reminders)
 
     def append(self, ical, filename=None):
@@ -509,7 +509,7 @@ def rem2ics():
 
     parser = ArgumentParser(description='Converter from Remind to iCalendar syntax.')
     parser.add_argument('-s', '--startdate', type=lambda s: parse(s).date(),
-                        default=date.today()-timedelta(weeks=12),
+                        default=date.today() - timedelta(weeks=12),
                         help='Start offset for remind call (default: -12 weeks)')
     parser.add_argument('-m', '--month', type=int, default=15,
                         help='Number of month to generate calendar beginning wit stadtdate (default: 15)')
