@@ -280,7 +280,7 @@ class Remind(object):
         if uid:
             self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
         elif filename:
-            for event in self._reminders[filename]:
+            for event in self._reminders[filename].values():
                 self._gen_vevent(event, cal.add('vevent'))
         else:
             for filename in self._reminders:
