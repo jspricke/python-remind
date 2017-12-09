@@ -257,11 +257,16 @@ class Remind(object):
         self._update()
         return list(self._icals.keys())
 
+    @staticmethod
+    def _get_uid(line):
+        """UID of a remind line"""
+        return '%s@%s' % (md5(line[:-1].encode('utf-8')).hexdigest(), getfqdn())
+
     def get_uids(self):
         """UIDs of all reminders in the file excluding included files"""
         with self._lock:
             rem = open(self._filename).readlines()
-            return ['%s@%s' % (md5(line[:-1].encode('utf-8')).hexdigest(), getfqdn()) for line in rem if line.startswith('REM')]
+            return [Remind._get_uid(line) for line in rem if line.startswith('REM')]
 
     def to_vobject(self, filename=None):
         """Return iCal object of all Remind files or the specified filename"""
