@@ -391,7 +391,7 @@ class Remind(object):
 
         duration = Remind._event_duration(vevent)
 
-        if isinstance(dtstart, date) and duration.days > 1:
+        if type(dtstart) is date and duration.days > 1:
             remind.append('*1')
             if dtend is not None:
                 dtend -= timedelta(days=1)
