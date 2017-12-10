@@ -474,13 +474,17 @@ class Remind(object):
 
     def append(self, ical, filename=None):
         """Append a Remind command generated from the iCalendar to the file"""
+        return self.append_vobject(readOne(ical), filename)
+
+    def append_vobject(self, ical, filename=None):
+        """Append a Remind command generated from the iCalendar to the file"""
         if not filename:
             filename = self._filename
         elif filename not in self._reminders:
             return
 
         with self._lock:
-            outdat = self.to_reminders(readOne(ical))
+            outdat = self.to_reminders(ical)
             open(filename, 'a').write(outdat)
 
         return Remind._get_uid(outdat)
@@ -504,6 +508,10 @@ class Remind(object):
 
     def replace(self, uid, ical, filename=None):
         """Update the Remind command with the uid in the file with the new iCalendar"""
+        return self.replace_vobject(uid, readOne(ical), filename)
+
+    def replace_vobject(self, uid, ical, filename=None):
+        """Update the Remind command with the uid in the file with the new iCalendar"""
         if not filename:
             filename = self._filename
         elif filename not in self._reminders:
@@ -515,9 +523,12 @@ class Remind(object):
             rem = open(filename).readlines()
             for (index, line) in enumerate(rem):
                 if uid == md5(line[:-1].encode('utf-8')).hexdigest():
-                    rem[index] = self.to_reminders(readOne(ical))
+                    rem[index] = self.to_reminders(ical)
+                    new_uid = self._get_uid(rem[index])
                     open(filename, 'w').writelines(rem)
                     break
+
+        return new_uid
 
 
 def rem2ics():
