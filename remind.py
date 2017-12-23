@@ -530,6 +530,14 @@ class Remind(object):
 
         return new_uid
 
+    def get_meta(self):
+        """Meta tags of the vObject collection"""
+        return {'tag': 'VCALENDAR', 'C:supported-calendar-component-set': 'VEVENT'}
+
+    def last_modified(self):
+        """Last time the Remind files where parsed"""
+        return self._mtime
+
 
 def rem2ics():
     """Command line tool to convert from Remind to iCalendar"""
