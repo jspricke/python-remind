@@ -77,5 +77,6 @@ def main():
     open(args.first_output, 'w').write(first_cal.serialize())
     open(args.second_output, 'w').write(second_out.serialize())
 
+
 if __name__ == '__main__':
     main()

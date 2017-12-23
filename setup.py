@@ -17,7 +17,7 @@ setup(name='remind',
           'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
           'Topic :: Office/Business :: Scheduling',
           'Topic :: Software Development :: Libraries :: Python Modules',
-          ],
+      ],
 
       setup_requires=['nose>=1.3', 'coverage'],
       install_requires=['python-dateutil', 'vobject'],
@@ -28,7 +28,7 @@ setup(name='remind',
               'rem2ics = remind:rem2ics',
               'ics2rem = remind:ics2rem',
               'icscomp = ics_compare:main',
-              ]
-          },
+          ]
+      },
 
       test_suite='nose.collector',)

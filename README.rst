@@ -1,7 +1,7 @@
 Python Remind library
 =====================
 
-Python library to convert between `Remind <http://www.roaringpenguin.com/products/remind>`_ and iCalendar.
+Python library to convert between `Remind <https://www.roaringpenguin.com/products/remind>`_ and iCalendar.
 Can be used stand alone (provided rem2ics and ics2rem tools) as well as integrated as a CalDAV client or server.
 
 Installation
@@ -14,6 +14,7 @@ For Debian/Ubuntu use::
 
 Using pip
 ~~~~~~~~~
+
 ::
 
   $ pip install remind
@@ -30,7 +31,7 @@ Using python-setuptools
 Set up a Remind CalDAV server
 -----------------------------
 
-Have a look at `radicale-remind <http://github.com/jspricke/radicale-remind>`_
+Have a look at `radicale-remind <https://github.com/jspricke/radicale-remind>`_
 
 Sync to an external iCalendar server (http; cron)
 -------------------------------------------------
@@ -42,7 +43,7 @@ Sync to an external iCalendar server (http; cron)
 Sync to an external CalDAV server
 ---------------------------------
 
-Have a look at `remind-caldav <http://github.com/jspricke/remind-caldav>`_
+Have a look at `remind-caldav <https://github.com/jspricke/remind-caldav>`_
 
 Share your calendar using http
 ------------------------------
@@ -53,14 +54,16 @@ Share your calendar using http
 
 Publish the URL and use these guides to integrate it into other calendar software:
 
-* `Thunderbird/Lightning <http://mzl.la/1BsOArH>`_ (Section: On the Network)
+* `Thunderbird/Lightning <https://mzl.la/1BsOArH>`_ (Section: On the Network)
 * `Google Calendar <https://support.google.com/calendar/answer/37100>`_
 * `Apple Calendar <https://support.apple.com/kb/PH11523>`_
 
 Format of the Remind MSG body
 -----------------------------
 
-``%" summary at location %" description``
+::
+
+  %" summary at location %" description
 
 The ``%"`` is omitted, if there is no description in the iCalendar.
 
