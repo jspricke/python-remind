@@ -48,6 +48,7 @@ class Remind(object):
         self._reminders = {}
         self._mtime = 0
         self._alarm = alarm
+        self._update()
 
     def _parse_remind(self, filename, lines=''):
         """Calls remind and parses the output into a dict
@@ -241,13 +242,13 @@ class Remind(object):
         """Reload Remind files if the mtime is newer"""
         update = not self._reminders
 
-        for fname in self._reminders:
-            if getmtime(fname) > self._mtime:
-                update = True
-                break
+        with self._lock:
+            for fname in self._reminders:
+                if getmtime(fname) > self._mtime:
+                    update = True
+                    break
 
-        if update:
-            with self._lock:
+            if update:
                 self._reminders = self._parse_remind(self._filename)
 
     def get_filesnames(self):
@@ -537,6 +538,7 @@ class Remind(object):
 
     def last_modified(self):
         """Last time the Remind files where parsed"""
+        self._update()
         return self._mtime
 
 
