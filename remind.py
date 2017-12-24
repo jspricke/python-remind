@@ -528,9 +528,7 @@ class Remind(object):
                     rem[index] = self.to_reminders(ical)
                     new_uid = self._get_uid(rem[index])
                     open(filename, 'w').writelines(rem)
-                    break
-
-        return new_uid
+                    return new_uid
 
     def get_meta(self):
         """Meta tags of the vObject collection"""
