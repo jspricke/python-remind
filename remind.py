@@ -49,35 +49,18 @@ class Remind(object):
         self._mtime = 0
         self._alarm = alarm
 
-    @staticmethod
-    def _load_files(files, filename, lines=''):
-        """load content of Remind files and store it in the files dict
-           recursively include all included files as well
-
-        files -- dict mapping filenames to content
-        filename -- file to parse
-        lines -- used as stdin to remind (filename will be set to -)
-
-        """
-        if lines:
-            files[filename] = (lines.split('\n'), {})
-        else:
-            files[filename] = (open(filename).readlines(), {})
-        for line in files[filename][0]:
-            if line.startswith('include'):
-                Remind._load_files(files, line.split(' ')[1].strip())
-
     def _parse_remind(self, filename, lines=''):
         """Calls remind and parses the output into a dict
 
         filename -- the remind file (included files will be used as well)
         lines -- used as stdin to remind (filename will be set to -)
         """
+        files = {}
+        reminders = {}
         if lines:
             filename = '-'
-
-        files = {}
-        Remind._load_files(files, filename, lines)
+            files[filename] = lines
+            reminders[filename] = {}
 
         cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r',
                filename, str(self._startdate)]
@@ -86,20 +69,39 @@ class Remind(object):
         except OSError:
             raise OSError('Error running: %s' % ' '.join(cmd))
 
-        reminders = {}
         rem = rem.splitlines()
-        for filename in files:
-            reminders[filename] = {}
         for (fileinfo, line) in zip(rem[::2], rem[1::2]):
             fileinfo = fileinfo.split()
-            src_filename = fileinfo[3]
-            text = files[src_filename][0][int(fileinfo[2]) - 1]
 
+            src_filename = fileinfo[3]
+            if src_filename not in files:
+                # There is a race condition with the remind call above here.
+                # This could be solved by parsing the remind -de output,
+                # but I don't see an easy way to do that.
+                files[src_filename] = open(src_filename).readlines()
+                reminders[src_filename] = {}
+                mtime = getmtime(src_filename)
+                if mtime > self._mtime:
+                    self._mtime = mtime
+
+            text = files[src_filename][int(fileinfo[2]) - 1]
             event = self._parse_remind_line(line, text)
             if event['uid'] in reminders[src_filename]:
                 reminders[src_filename][event['uid']]['dtstart'] += event['dtstart']
             else:
                 reminders[src_filename][event['uid']] = event
+
+        # Find included files without reminders and add them to the file list
+        for source in files.values():
+            for line in source:
+                if line.startswith('include'):
+                    new_file = line.split(' ')[1].strip()
+                    if new_file not in reminders:
+                        reminders[new_file] = {}
+                        mtime = getmtime(new_file)
+                        if mtime > self._mtime:
+                            self._mtime = mtime
+
         return reminders
 
     @staticmethod
@@ -240,10 +242,9 @@ class Remind(object):
         update = not self._reminders
 
         for fname in self._reminders:
-            mtime = getmtime(fname)
-            if mtime > self._mtime:
-                self._mtime = mtime
+            if getmtime(fname) > self._mtime:
                 update = True
+                break
 
         if update:
             with self._lock:
