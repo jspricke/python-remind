@@ -2,9 +2,8 @@ from setuptools import setup
 
 setup(name='remind',
       version='0.12.0',
-      description='''
-       Remind Python library
-       ''',
+      description='Remind Python library',
+      long_description=open('README.rst').read(),
       author='Jochen Sprickerhof',
       author_email='remind@jochen.sprickerhof.de',
       license='GPLv3+',
