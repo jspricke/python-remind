@@ -205,6 +205,7 @@ class Remind(object):
     def _gen_vevent(self, event, vevent):
         """Generate vevent from given event"""
         vevent.add('dtstart').value = event['dtstart'][0]
+        vevent.add('dtstamp').value = datetime.fromtimestamp(self._mtime)
         vevent.add('summary').value = event['msg']
         vevent.add('uid').value = event['uid']
 
