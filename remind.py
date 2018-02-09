@@ -48,6 +48,12 @@ class Remind(object):
         self._reminders = {}
         self._mtime = 0
         self._alarm = alarm
+        # When used by radicale-remind, there are two ways to mark en entry as
+        # updated. One is by changing it's etag and one by giving it a new UID.
+        # The remind UID is designed to change whenever the reminder was
+        # changed, making it actually a new reminder. This makes the etag
+        # functionality useless (or even counterproductive). This disables it.
+        self.href_is_etag = True
         self._update()
 
     def _parse_remind(self, filename, lines=''):
