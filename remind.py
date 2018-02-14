@@ -547,10 +547,13 @@ class Remind(object):
         values actually change.
 
         """
-        for vevent in vobject.vevent_list:
+        vobject_copy = iCalendar()
+        vobject_copy.copy(vobject)
+
+        for vevent in vobject_copy.vevent_list:
             vevent.dtstamp.value = datetime.fromtimestamp(0)
         etag = md5()
-        etag.update(vobject.serialize().encode("utf-8"))
+        etag.update(vobject_copy.serialize().encode("utf-8"))
         return '"%s"' % etag.hexdigest()
 
 
