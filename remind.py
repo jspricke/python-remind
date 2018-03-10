@@ -89,8 +89,10 @@ class Remind(object):
             event = self._parse_remind_line(line, text)
             if event['uid'] in reminders[src_filename]:
                 reminders[src_filename][event['uid']]['dtstart'] += event['dtstart']
+                reminders[src_filename][event['uid']]['line'] += line
             else:
                 reminders[src_filename][event['uid']] = event
+                reminders[src_filename][event['uid']]['line'] = line
 
         # Find included files without reminders and add them to the file list
         for source in files.values():
@@ -273,6 +275,20 @@ class Remind(object):
         if filename:
             return self._reminders[filename].keys()
         return [uid for uids in self._reminders.values() for uid in uids]
+
+    def to_vobject_etag(self, filename, uid):
+        """Return iCal object and etag of one Remind entry
+
+        filename -- the remind file
+        uid -- the UID of the Remind line
+        """
+        self._update()
+
+        cal = iCalendar()
+        self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
+        etag = md5()
+        etag.update(self._reminders[filename][uid]['line'].encode("utf-8"))
+        return cal, etag.hexdigest()
 
     def to_vobject(self, filename=None, uid=None):
         """Return iCal object of Remind lines
@@ -539,22 +555,6 @@ class Remind(object):
         """Last time the Remind files where parsed"""
         self._update()
         return self._mtime
-
-    def get_etag(self, vobject):
-        """generate an etag for the given vobject. This sets the dtstamp to
-        epoch 0 to generate a deterministic result as Remind doesn't save a
-        dtstamp for every entry. And etag should only change if the other
-        values actually change.
-
-        """
-        vobject_copy = iCalendar()
-        vobject_copy.copy(vobject)
-
-        for vevent in vobject_copy.vevent_list:
-            vevent.dtstamp.value = datetime.fromtimestamp(0)
-        etag = md5()
-        etag.update(vobject_copy.serialize().encode("utf-8"))
-        return '"%s"' % etag.hexdigest()
 
 
 def rem2ics():
