@@ -569,7 +569,7 @@ def rem2ics():
                         default=date.today() - timedelta(weeks=12),
                         help='Start offset for remind call (default: -12 weeks)')
     parser.add_argument('-m', '--month', type=int, default=15,
-                        help='Number of month to generate calendar beginning wit stadtdate (default: 15)')
+                        help='Number of month to generate calendar beginning wit startdate (default: 15)')
     parser.add_argument('-a', '--alarm', type=int, default=-10,
                         help='Trigger time for the alarm before the event in minutes (default: -10)')
     parser.add_argument('-z', '--zone', default='Europe/Berlin',
