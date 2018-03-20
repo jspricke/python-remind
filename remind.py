@@ -288,7 +288,7 @@ class Remind(object):
         self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
         etag = md5()
         etag.update(self._reminders[filename][uid]['line'].encode("utf-8"))
-        return cal, etag.hexdigest()
+        return cal, '"%s"' % etag.hexdigest()
 
     def to_vobject(self, filename=None, uid=None):
         """Return iCal object of Remind lines
