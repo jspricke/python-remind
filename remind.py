@@ -18,19 +18,20 @@
 
 from datetime import date, datetime, timedelta
 from dateutil import rrule
-from dateutil.tz import gettz
 from hashlib import md5
 from os.path import getmtime, expanduser
+from pytz import timezone
 from socket import getfqdn
 from subprocess import Popen, PIPE
 from threading import Lock
+from tzlocal import get_localzone
 from vobject import readOne, iCalendar
 
 
 class Remind(object):
     """Represents a collection of Remind files"""
 
-    def __init__(self, filename=expanduser('~/.reminders'), localtz=gettz(),
+    def __init__(self, filename=expanduser('~/.reminders'), localtz=None,
                  startdate=date.today() - timedelta(weeks=12), month=15,
                  alarm=timedelta(minutes=-10)):
         """Constructor
@@ -40,7 +41,7 @@ class Remind(object):
         startdate -- the date to start parsing, will be passed to remind
         month -- how many month to parse, will be passed to remind -s
         """
-        self._localtz = localtz
+        self._localtz = localtz if localtz else get_localzone()
         self._filename = filename
         self._startdate = startdate
         self._month = month
@@ -572,18 +573,15 @@ def rem2ics():
                         help='Number of month to generate calendar beginning wit startdate (default: 15)')
     parser.add_argument('-a', '--alarm', type=int, default=-10,
                         help='Trigger time for the alarm before the event in minutes (default: -10)')
-    parser.add_argument('-z', '--zone', default='Europe/Berlin',
-                        help='Timezone of Remind file (default: Europe/Berlin)')
+    parser.add_argument('-z', '--zone',
+                        help='Timezone of Remind file (default: local timezone)')
     parser.add_argument('infile', nargs='?', default=expanduser('~/.reminders'),
                         help='The Remind file to process (default: ~/.reminders)')
     parser.add_argument('outfile', nargs='?', type=FileType('w'), default=stdout,
                         help='Output iCalendar file (default: stdout)')
     args = parser.parse_args()
 
-    zone = gettz(args.zone)
-    # Manually set timezone name to generate correct ical files
-    # (python-vobject tests for the zone attribute)
-    zone.zone = args.zone
+    zone = timezone(args.zone) if args.zone else None
 
     if args.infile == '-':
         remind = Remind(args.infile, zone, args.startdate, args.month, timedelta(minutes=args.alarm))
@@ -616,18 +614,15 @@ def ics2rem():
     parser.add_argument('--posttime',
                         help='String to follow the time in every timed Remind entry. '
                         'Useful for entering "tdelta" and "trepeat" fields (see man remind).')
-    parser.add_argument('-z', '--zone', default='Europe/Berlin',
-                        help='Timezone of Remind file (default: Europe/Berlin)')
+    parser.add_argument('-z', '--zone',
+                        help='Timezone of Remind file (default: local timezone)')
     parser.add_argument('infile', nargs='?', type=FileType('r'), default=stdin,
                         help='Input iCalendar file (default: stdin)')
     parser.add_argument('outfile', nargs='?', type=FileType('w'), default=stdout,
                         help='Output Remind file (default: stdout)')
     args = parser.parse_args()
 
-    zone = gettz(args.zone)
-    # Manually set timezone name to generate correct ical files
-    # (python-vobject tests for the zone attribute)
-    zone.zone = args.zone
+    zone = timezone(args.zone) if args.zone else None
 
     vobject = readOne(args.infile.read())
     rem = Remind(localtz=zone).to_reminders(

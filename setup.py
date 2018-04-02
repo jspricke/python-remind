@@ -19,7 +19,7 @@ setup(name='remind',
       ],
 
       setup_requires=['nose>=1.3', 'coverage'],
-      install_requires=['python-dateutil', 'vobject'],
+      install_requires=['python-dateutil', 'pytz', 'tzlocal', 'vobject'],
       py_modules=['remind', 'ics_compare'],
 
       entry_points={
