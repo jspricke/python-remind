@@ -80,4 +80,5 @@ Remind -> iCalendar
 
 * Events are only evaluated in the given time frame, so events extending it, are cut of (birthday reminders for example).
 * Complex reminders are only preserved in their evaluated form (PUSH-OMIT-CONTEXT, OMIT, TRIGGER, BEFORE, SKIP).
+  Same holds true for function evaluation in MSG. For example having the age in a birthday reminder results in the same string for every year.
 * Periodic reminders other then daily or weekly are not preserved.
