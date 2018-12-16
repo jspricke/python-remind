@@ -283,13 +283,28 @@ class Remind(object):
         filename -- the remind file
         uid -- the UID of the Remind line
         """
+        return self.to_vobjects(filename, [uid])[0][1:3]
+
+    def to_vobjects(self, filename, uids=None):
+        """Return iCal objects and etags of all Remind entries in uids
+
+        filename -- the remind file
+        uids -- the UIDs of the Remind lines (all if None)
+        """
         self._update()
 
-        cal = iCalendar()
-        self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
-        etag = md5()
-        etag.update(self._reminders[filename][uid]['line'].encode("utf-8"))
-        return cal, '"%s"' % etag.hexdigest()
+        if not uids:
+            uids = self._reminders[filename]
+
+        items = []
+
+        for uid in uids:
+            cal = iCalendar()
+            self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
+            etag = md5()
+            etag.update(self._reminders[filename][uid]['line'].encode("utf-8"))
+            items.append((uid, cal, '"%s"' % etag.hexdigest()))
+        return items
 
     def to_vobject(self, filename=None, uid=None):
         """Return iCal object of Remind lines
@@ -547,6 +562,22 @@ class Remind(object):
                     new_uid = self._get_uid(rem[index])
                     open(filename, 'w').writelines(rem)
                     return new_uid
+
+    def move_vobject(self, uid, from_file, to_file):
+        """Move the Remind command with the uid from from_file to to_file"""
+        if from_file not in self._reminders or to_file not in self._reminders:
+            return
+
+        uid = uid.split('@')[0]
+
+        with self._lock:
+            rem = open(from_file).readlines()
+            for (index, line) in enumerate(rem):
+                if uid == md5(line[:-1].encode('utf-8')).hexdigest():
+                    del rem[index]
+                    open(from_file, 'w').writelines(rem)
+                    open(to_file, 'a').write(line)
+                    break
 
     def get_meta(self):
         """Meta tags of the vObject collection"""
