@@ -274,6 +274,8 @@ class Remind(object):
         self._update()
 
         if filename:
+            if filename not in self._reminders:
+                return []
             return self._reminders[filename].keys()
         return [uid for uids in self._reminders.values() for uid in uids]
 
