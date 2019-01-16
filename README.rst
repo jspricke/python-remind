@@ -1,7 +1,7 @@
 Python Remind library
 =====================
 
-Python library to convert between `Remind <https://www.roaringpenguin.com/products/remind>`_ and iCalendar.
+Python library to convert between `Remind <https://dianne.skoll.ca/projects/remind/>`_ and iCalendar.
 Can be used stand alone (provided rem2ics and ics2rem tools) as well as integrated as a CalDAV client or server.
 
 Installation
