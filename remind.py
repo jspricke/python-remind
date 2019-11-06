@@ -19,7 +19,7 @@
 from datetime import date, datetime, timedelta
 from dateutil import rrule
 from hashlib import md5
-from os.path import getmtime, expanduser
+from os.path import expanduser, getmtime, isfile
 from pytz import timezone
 from socket import getfqdn
 from subprocess import Popen, PIPE
@@ -100,7 +100,7 @@ class Remind(object):
             for line in source:
                 if line.startswith('include'):
                     new_file = line.split(' ')[1].strip()
-                    if new_file not in reminders:
+                    if new_file not in reminders and isfile(new_file):
                         reminders[new_file] = {}
                         mtime = getmtime(new_file)
                         if mtime > self._mtime:
