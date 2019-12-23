@@ -23,6 +23,7 @@ from os.path import expanduser, getmtime, isfile
 from pytz import timezone
 from socket import getfqdn
 from subprocess import Popen, PIPE
+from time import time
 from threading import Lock
 from tzlocal import get_localzone
 from vobject import readOne, iCalendar
@@ -245,6 +246,11 @@ class Remind(object):
     def _update(self):
         """Reload Remind files if the mtime is newer"""
         update = not self._reminders
+
+        now = time()
+        if datetime.fromtimestamp(self._mtime).date() < datetime.fromtimestamp(now).date():
+            update = True
+            self._mtime = now
 
         with self._lock:
             for fname in self._reminders:
