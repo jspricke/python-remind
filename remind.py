@@ -154,7 +154,7 @@ class Remind(object):
 
         event['categories'] = [tag for tag in tags[:-1] if tag not in classes]
 
-        event['uid'] = '%s@%s' % (tags[-1][7:], getfqdn())
+        event['uid'] = Remind._get_uid(text)
 
         return event
 
