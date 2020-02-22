@@ -269,7 +269,7 @@ class Remind(object):
     @staticmethod
     def _get_uid(line):
         """UID of a remind line"""
-        return '%s@%s' % (md5(line[:-1].encode('utf-8')).hexdigest(), getfqdn())
+        return '%s@%s' % (md5(line.strip().encode('utf-8')).hexdigest(), getfqdn())
 
     def get_uids(self, filename=None):
         """UIDs of all reminders in the file excluding included files
@@ -309,8 +309,7 @@ class Remind(object):
         for uid in uids:
             cal = iCalendar()
             self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
-            etag = md5()
-            etag.update(self._reminders[filename][uid]['line'].encode("utf-8"))
+            etag = md5(self._reminders[filename][uid]['line'].strip().encode("utf-8"))
             items.append((uid, cal, '"%s"' % etag.hexdigest()))
         return items
 
@@ -546,7 +545,7 @@ class Remind(object):
         with self._lock:
             rem = open(filename).readlines()
             for (index, line) in enumerate(rem):
-                if uid == md5(line[:-1].encode('utf-8')).hexdigest():
+                if uid == md5(line.strip().encode('utf-8')).hexdigest():
                     del rem[index]
                     open(filename, 'w').writelines(rem)
                     break
@@ -567,7 +566,7 @@ class Remind(object):
         with self._lock:
             rem = open(filename).readlines()
             for (index, line) in enumerate(rem):
-                if uid == md5(line[:-1].encode('utf-8')).hexdigest():
+                if uid == md5(line.strip().encode('utf-8')).hexdigest():
                     rem[index] = self.to_reminders(ical)
                     new_uid = self._get_uid(rem[index])
                     open(filename, 'w').writelines(rem)
@@ -583,7 +582,7 @@ class Remind(object):
         with self._lock:
             rem = open(from_file).readlines()
             for (index, line) in enumerate(rem):
-                if uid == md5(line[:-1].encode('utf-8')).hexdigest():
+                if uid == md5(line.strip().encode('utf-8')).hexdigest():
                     del rem[index]
                     open(from_file, 'w').writelines(rem)
                     open(to_file, 'a').write(line)
