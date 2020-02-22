@@ -365,6 +365,8 @@ class Remind(object):
             rep.append('*%d' % rruleset._rrule[0]._interval)
         elif rruleset._rrule[0]._freq == rrule.WEEKLY:
             rep.append('*%d' % (7 * rruleset._rrule[0]._interval))
+        elif rruleset._rrule[0]._freq == rrule.MONTHLY:
+            rep.append('%d' % rruleset._rrule[0]._bymonthday[0])
         else:
             return Remind._parse_rdate(rruleset._rrule[0])
 
@@ -455,7 +457,7 @@ class Remind(object):
         if isinstance(dtend, datetime) and dtend.tzinfo:
             dtend = dtend.astimezone(self._localtz)
 
-        if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str):
+        if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str) and (not hasattr(vevent, 'rrule') or vevent.rruleset._rrule[0]._freq != rrule.MONTHLY):
             remind.append(dtstart.strftime('%b %d %Y').replace(' 0', ' '))
 
         if postdate:
