@@ -62,7 +62,7 @@ class Remind(object):
         reminders = {}
         if lines:
             filename = '-'
-            files[filename] = lines
+            files[filename] = lines.split('\n')
             reminders[filename] = {}
 
         cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r',
