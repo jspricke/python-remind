@@ -19,12 +19,14 @@
 from datetime import date, datetime, timedelta
 from dateutil import rrule
 from hashlib import md5
+from json import loads
 from os.path import expanduser, getmtime, isfile
 from pytz import timezone
+from re import DOTALL, match
 from socket import getfqdn
 from subprocess import Popen, PIPE
-from time import time
 from threading import Lock
+from time import time
 from tzlocal import get_localzone
 from vobject import readOne, iCalendar
 
@@ -65,37 +67,41 @@ class Remind(object):
             files[filename] = lines.split('\n')
             reminders[filename] = {}
 
-        cmd = ['remind', '-l', '-s%d' % self._month, '-b1', '-y', '-r',
+        cmd = ['remind', f'-ppp{self._month}', '-b2', '-y',
                filename, str(self._startdate)]
         try:
-            rem = Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8')
+            rem = loads(Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8'))
         except OSError:
             raise OSError('Error running: %s' % ' '.join(cmd))
 
-        rem = rem.splitlines()
-        for (fileinfo, line) in zip(rem[::2], rem[1::2]):
-            fileinfo = fileinfo.split()
+        for month in rem:
+            for entry in month['entries']:
+                src_filename = entry['filename']
+                if src_filename not in files:
+                    # There is a race condition with the remind call above here.
+                    # This could be solved by parsing the remind -de output,
+                    # but I don't see an easy way to do that.
+                    files[src_filename] = open(src_filename).readlines()
+                    reminders[src_filename] = {}
+                    mtime = getmtime(src_filename)
+                    if mtime > self._mtime:
+                        self._mtime = mtime
 
-            src_filename = fileinfo[3]
-            if src_filename not in files:
-                # There is a race condition with the remind call above here.
-                # This could be solved by parsing the remind -de output,
-                # but I don't see an easy way to do that.
-                files[src_filename] = open(src_filename).readlines()
-                reminders[src_filename] = {}
-                mtime = getmtime(src_filename)
-                if mtime > self._mtime:
-                    self._mtime = mtime
+                entry['uid'] = Remind._get_uid(files[entry['filename']][entry['lineno'] - 1])
 
-            text = files[src_filename][int(fileinfo[2]) - 1]
-            event = self._parse_remind_line(line, text)
-            if event['uid'] in reminders[src_filename]:
-                reminders[src_filename][event['uid']]['dtstart'] += event['dtstart']
-                reminders[src_filename][event['uid']]['line'] += line
-            else:
-                reminders[src_filename][event['uid']] = event
-                reminders[src_filename][event['uid']]['line'] = line
+                if 'eventstart' in entry:
+                    dtstart = datetime.strptime(entry['eventstart'], '%Y-%m-%dT%H:%M').replace(tzinfo=self._localtz)
+                else:
+                    dtstart = datetime.strptime(entry['date'], '%Y-%m-%d').date()
 
+                if entry['uid'] in reminders[src_filename]:
+                    if dtstart not in reminders[src_filename][entry['uid']]['dtstart']:
+                        reminders[src_filename][entry['uid']]['dtstart'].append(dtstart)
+                else:
+                    entry['dtstart'] = [dtstart]
+                    reminders[src_filename][entry['uid']] = entry
+
+        # TODO: use queue
         # Find included files without reminders and add them to the file list
         for source in files.values():
             for line in source:
@@ -108,55 +114,6 @@ class Remind(object):
                             self._mtime = mtime
 
         return reminders
-
-    @staticmethod
-    def _gen_description(text):
-        """Convert from Remind MSG to iCal description
-        Opposite of _gen_msg()
-        """
-        return text[text.rfind('%"') + 3:].replace('%_', '\n').replace('["["]', '[').strip()
-
-    def _parse_remind_line(self, line, text):
-        """Parse a line of remind output into a dict
-
-        line -- the remind output
-        text -- the original remind input
-        """
-        event = {}
-        line = line.split(None, 6)
-        dat = [int(f) for f in line[0].split('/')]
-        if line[4] != '*':
-            start = divmod(int(line[4]), 60)
-            event['dtstart'] = [datetime(dat[0], dat[1], dat[2], start[0], start[1], tzinfo=self._localtz)]
-            if line[3] != '*':
-                event['duration'] = timedelta(minutes=int(line[3]))
-        else:
-            event['dtstart'] = [date(dat[0], dat[1], dat[2])]
-
-        msg = ' '.join(line[5:]) if line[4] == '*' else line[6]
-        msg = msg.strip().replace('%_', '\n').replace('["["]', '[')
-
-        if ' at ' in msg:
-            (event['msg'], event['location']) = msg.rsplit(' at ', 1)
-        else:
-            event['msg'] = msg
-
-        if '%"' in text:
-            event['description'] = Remind._gen_description(text)
-
-        tags = line[2].split(',')
-
-        classes = ['PUBLIC', 'PRIVATE', 'CONFIDENTIAL']
-
-        for tag in tags[:-1]:
-            if tag in classes:
-                event['class'] = tag
-
-        event['categories'] = [tag for tag in tags[:-1] if tag not in classes]
-
-        event['uid'] = Remind._get_uid(text)
-
-        return event
 
     @staticmethod
     def _interval(dates):
@@ -209,31 +166,45 @@ class Remind(object):
     def _gen_vevent(self, event, vevent):
         """Generate vevent from given event"""
         vevent.add('dtstart').value = event['dtstart'][0]
+
+        msg = event['body'].strip().replace('["["]', '[')
+        groups = match(r'%"(.*)%"(.*)', msg, DOTALL)
+        if groups:
+            msg = groups[1]
+            vevent.add('description').value = groups[2]
+
+        groups = match(r'^(.*) at (.*)$', msg)
+        if groups:
+            msg = groups[1]
+            vevent.add('location').value = groups[2]
+
         vevent.add('dtstamp').value = datetime.fromtimestamp(self._mtime)
-        vevent.add('summary').value = event['msg']
+        vevent.add('summary').value = msg
         vevent.add('uid').value = event['uid']
 
-        if 'class' in event:
-            vevent.add('class').value = event['class']
+        if 'tags' in event:
+            tags = event['tags'].split(',')[:-1]
 
-        if 'categories' in event and len(event['categories']) > 0:
-            vevent.add('categories').value = event['categories']
+            classes = ['PUBLIC', 'PRIVATE', 'CONFIDENTIAL']
 
-        if 'location' in event:
-            vevent.add('location').value = event['location']
+            tag_class = [tag for tag in tags if tag in classes]
+            if tag_class:
+                vevent.add('class').value = tag_class[0]
 
-        if 'description' in event:
-            vevent.add('description').value = event['description']
+            categories = [tag for tag in tags if tag not in classes]
+
+            if categories:
+                vevent.add('categories').value = categories
 
         if isinstance(event['dtstart'][0], datetime):
             if self._alarm != timedelta():
                 valarm = vevent.add('valarm')
                 valarm.add('trigger').value = self._alarm
                 valarm.add('action').value = 'DISPLAY'
-                valarm.add('description').value = event['msg']
+                valarm.add('description').value = msg
 
-            if 'duration' in event:
-                vevent.add('duration').value = event['duration']
+            if 'eventduration' in event:
+                vevent.add('duration').value = timedelta(minutes=event['eventduration'])
             else:
                 vevent.add('dtend').value = event['dtstart'][0]
 
@@ -393,7 +364,6 @@ class Remind(object):
     @staticmethod
     def _gen_msg(vevent, label, tail, sep):
         """Generate a Remind MSG from the given vevent.
-        Opposite of _gen_description()
         """
         rem = ['MSG']
         msg = []
