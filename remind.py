@@ -309,8 +309,7 @@ class Remind(object):
         for uid in uids:
             cal = iCalendar()
             self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
-            etag = md5(self._reminders[filename][uid]['line'].strip().encode("utf-8"))
-            items.append((uid, cal, '"%s"' % etag.hexdigest()))
+            items.append((uid, cal, '"%s"' % uid.split('@')[0]))
         return items
 
     def to_vobject(self, filename=None, uid=None):
