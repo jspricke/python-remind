@@ -1,6 +1,6 @@
 # Python library to convert between Remind and iCalendar
 #
-# Copyright (C) 2013-2018  Jochen Sprickerhof
+# Copyright (C) 2013-2020  Jochen Sprickerhof
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -67,18 +67,11 @@ class Remind(object):
         except OSError:
             raise OSError('Error running: %s' % ' '.join(cmd))
 
-        files = {}
         reminders = {}
-        if lines:
-            files['-'] = lines.split('\n')
-
         for source in findall(r"Caching file `(.*)' in memory", stderr.decode('utf-8')):
             reminders[source] = {}
             if isfile(source):
                 # There is a race condition with the remind call above here.
-                # This could be solved by parsing the remind -de output,
-                # but I don't see an easy way to do that.
-                files[source] = open(source).readlines()
                 mtime = getmtime(source)
                 if mtime > self._mtime:
                     self._mtime = mtime
@@ -88,7 +81,7 @@ class Remind(object):
                 if 'passthru' in entry:
                     continue
 
-                entry['uid'] = Remind._get_uid(files[entry['filename']][entry['lineno'] - 1])
+                entry['uid'] = Remind._get_uid(entry)
 
                 if 'eventstart' in entry:
                     dtstart = datetime.strptime(entry['eventstart'], '%Y-%m-%dT%H:%M').replace(tzinfo=self._localtz)
@@ -227,9 +220,9 @@ class Remind(object):
         return list(self._reminders.keys())
 
     @staticmethod
-    def _get_uid(line):
+    def _get_uid(event):
         """UID of a remind line"""
-        return '%s@%s' % (md5(line.strip().encode('utf-8')).hexdigest(), getfqdn())
+        return '%s@%s' % (event['tags'].split(',')[-1][7:], getfqdn())
 
     def get_uids(self, filename=None):
         """UIDs of all reminders in the file excluding included files
