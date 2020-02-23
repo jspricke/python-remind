@@ -427,7 +427,7 @@ class Remind(object):
     def _rem_clean(rem):
         """Strip, transform newlines, and escape '[' in string so it's
         acceptable as a remind entry."""
-        return rem.strip().replace('\n', '%_').replace('[', '["["]')
+        return rem.strip().replace('%', '%%').replace('\n', '%_').replace('[', '["["]')
 
     @staticmethod
     def _abbr_tag(tag):
