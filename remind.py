@@ -85,6 +85,9 @@ class Remind(object):
 
         for month in loads(stdout.decode('utf-8')):
             for entry in month['entries']:
+                if 'passthru' in entry:
+                    continue
+
                 entry['uid'] = Remind._get_uid(files[entry['filename']][entry['lineno'] - 1])
 
                 if 'eventstart' in entry:
