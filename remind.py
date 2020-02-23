@@ -22,7 +22,7 @@ from hashlib import md5
 from json import loads
 from os.path import expanduser, getmtime, isfile
 from pytz import timezone
-from re import DOTALL, match
+from re import DOTALL, findall, match
 from socket import getfqdn
 from subprocess import Popen, PIPE
 from threading import Lock
@@ -60,33 +60,31 @@ class Remind(object):
         filename -- the remind file (included files will be used as well)
         lines -- used as stdin to remind (filename will be set to -)
         """
-        files = {}
-        reminders = {}
-        if lines:
-            filename = '-'
-            files[filename] = lines.split('\n')
-            reminders[filename] = {}
-
-        cmd = ['remind', f'-ppp{self._month}', '-b2', '-y',
+        cmd = ['remind', f'-ppp{self._month}', '-b2', '-y', '-df',
                filename, str(self._startdate)]
         try:
-            rem = loads(Popen(cmd, stdin=PIPE, stdout=PIPE).communicate(input=lines.encode('utf-8'))[0].decode('utf-8'))
+            stdout, stderr = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE).communicate(input=lines.encode('utf-8'))
         except OSError:
             raise OSError('Error running: %s' % ' '.join(cmd))
 
-        for month in rem:
-            for entry in month['entries']:
-                src_filename = entry['filename']
-                if src_filename not in files:
-                    # There is a race condition with the remind call above here.
-                    # This could be solved by parsing the remind -de output,
-                    # but I don't see an easy way to do that.
-                    files[src_filename] = open(src_filename).readlines()
-                    reminders[src_filename] = {}
-                    mtime = getmtime(src_filename)
-                    if mtime > self._mtime:
-                        self._mtime = mtime
+        files = {}
+        reminders = {}
+        if lines:
+            files['-'] = lines.split('\n')
 
+        for source in findall(r"Caching file `(.*)' in memory", stderr.decode('utf-8')):
+            reminders[source] = {}
+            if isfile(source):
+                # There is a race condition with the remind call above here.
+                # This could be solved by parsing the remind -de output,
+                # but I don't see an easy way to do that.
+                files[source] = open(source).readlines()
+                mtime = getmtime(source)
+                if mtime > self._mtime:
+                    self._mtime = mtime
+
+        for month in loads(stdout.decode('utf-8')):
+            for entry in month['entries']:
                 entry['uid'] = Remind._get_uid(files[entry['filename']][entry['lineno'] - 1])
 
                 if 'eventstart' in entry:
@@ -94,24 +92,12 @@ class Remind(object):
                 else:
                     dtstart = datetime.strptime(entry['date'], '%Y-%m-%d').date()
 
-                if entry['uid'] in reminders[src_filename]:
-                    if dtstart not in reminders[src_filename][entry['uid']]['dtstart']:
-                        reminders[src_filename][entry['uid']]['dtstart'].append(dtstart)
+                if entry['uid'] in reminders[entry['filename']]:
+                    if dtstart not in reminders[entry['filename']][entry['uid']]['dtstart']:
+                        reminders[entry['filename']][entry['uid']]['dtstart'].append(dtstart)
                 else:
                     entry['dtstart'] = [dtstart]
-                    reminders[src_filename][entry['uid']] = entry
-
-        # TODO: use queue
-        # Find included files without reminders and add them to the file list
-        for source in files.values():
-            for line in source:
-                if line.startswith('include'):
-                    new_file = line.split(' ')[1].strip()
-                    if new_file not in reminders and isfile(new_file):
-                        reminders[new_file] = {}
-                        mtime = getmtime(new_file)
-                        if mtime > self._mtime:
-                            self._mtime = mtime
+                    reminders[entry['filename']][entry['uid']] = entry
 
         return reminders
 
