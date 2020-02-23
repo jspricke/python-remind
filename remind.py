@@ -408,7 +408,7 @@ class Remind(object):
         if hasattr(vevent, 'location') and vevent.location.value:
             msg.append('at %s' % Remind._rem_clean(vevent.location.value))
 
-        has_desc = hasattr(vevent, 'description') and vevent.description.value
+        has_desc = hasattr(vevent, 'description') and vevent.description.value.strip()
 
         if tail or has_desc:
             rem.append('%%"%s%%"' % ' '.join(msg))
@@ -419,7 +419,7 @@ class Remind(object):
             rem.append(tail)
 
         if has_desc:
-            rem[-1] += sep + Remind._rem_clean(vevent.description.value)
+            rem[-1] += sep + Remind._rem_clean(vevent.description.value).strip()
 
         return ' '.join(rem)
 
