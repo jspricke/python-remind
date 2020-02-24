@@ -52,7 +52,6 @@ class Remind(object):
         self._reminders = {}
         self._mtime = 0
         self._alarm = alarm
-        self._update()
 
     def _parse_remind(self, filename, lines=''):
         """Calls remind and parses the output into a dict
@@ -201,7 +200,7 @@ class Remind(object):
         update = not self._reminders
 
         now = time()
-        if datetime.fromtimestamp(self._mtime).date() < datetime.fromtimestamp(now).date():
+        if self._mtime > 0 and datetime.fromtimestamp(self._mtime).date() < datetime.fromtimestamp(now).date():
             update = True
             self._mtime = now
 
