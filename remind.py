@@ -467,10 +467,6 @@ class Remind(object):
                      for vevent in ical.vevent_list]
         return ''.join(reminders)
 
-    def append(self, ical, filename=None):
-        """Append a Remind command generated from the iCalendar to the file"""
-        return self.append_vobject(readOne(ical), filename)
-
     def append_vobject(self, ical, filename=None):
         """Append a Remind command generated from the iCalendar to the file"""
         if not filename:
@@ -500,10 +496,6 @@ class Remind(object):
                     del rem[index]
                     open(filename, 'w').writelines(rem)
                     break
-
-    def replace(self, uid, ical, filename=None):
-        """Update the Remind command with the uid in the file with the new iCalendar"""
-        return self.replace_vobject(uid, readOne(ical), filename)
 
     def replace_vobject(self, uid, ical, filename=None):
         """Update the Remind command with the uid in the file with the new iCalendar"""
