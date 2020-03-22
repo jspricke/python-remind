@@ -245,7 +245,7 @@ class Remind(object):
         """
         cal = iCalendar()
         self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
-        return uid, cal, '"%s"' % uid.split('@')[0]
+        return uid, cal, self.get_etag(cal)
 
     def to_vobject_etag(self, filename, uid):
         """Return iCal object and etag of one Remind entry
@@ -544,6 +544,22 @@ class Remind(object):
         """Last time the Remind files where parsed"""
         self._update()
         return self._mtime
+
+    def get_etag(self, vobject):
+        """generate an etag for the given vobject. This sets the dtstamp to
+        epoch 0 to generate a deterministic result as Remind doesn't save a
+        dtstamp for every entry. And etag should only change if the other
+        values actually change.
+
+        """
+        vobject_copy = iCalendar()
+        vobject_copy.copy(vobject)
+
+        for vevent in vobject_copy.vevent_list:
+            vevent.dtstamp.value = datetime.fromtimestamp(0)
+        etag = md5()
+        etag.update(vobject_copy.serialize().encode("utf-8"))
+        return '"%s"' % etag.hexdigest()
 
 
 def rem2ics():
