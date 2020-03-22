@@ -237,13 +237,25 @@ class Remind(object):
             return self._reminders[filename].keys()
         return [uid for uids in self._reminders.values() for uid in uids]
 
+    def _vobject_etag(self, filename, uid):
+        """Return iCal object and etag of one Remind entry
+
+        filename -- the remind file
+        uid -- the UID of the Remind line
+        """
+        cal = iCalendar()
+        self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
+        return uid, cal, '"%s"' % uid.split('@')[0]
+
     def to_vobject_etag(self, filename, uid):
         """Return iCal object and etag of one Remind entry
 
         filename -- the remind file
         uid -- the UID of the Remind line
         """
-        return self.to_vobjects(filename, [uid])[0][1:3]
+        self._update()
+
+        return self._vobject_etag(filename, uid)
 
     def to_vobjects(self, filename, uids=None):
         """Return iCal objects and etags of all Remind entries in uids
@@ -256,13 +268,7 @@ class Remind(object):
         if not uids:
             uids = self._reminders[filename]
 
-        items = []
-
-        for uid in uids:
-            cal = iCalendar()
-            self._gen_vevent(self._reminders[filename][uid], cal.add('vevent'))
-            items.append((uid, cal, '"%s"' % uid.split('@')[0]))
-        return items
+        return [self._vobject_etag(filename, uid) for uid in uids]
 
     def to_vobject(self, filename=None, uid=None):
         """Return iCal object of Remind lines
