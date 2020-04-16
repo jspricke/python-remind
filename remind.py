@@ -80,7 +80,7 @@ class Remind(object):
                 if 'passthru' in entry:
                     continue
 
-                entry['uid'] = Remind._get_uid(entry)
+                entry['uid'] = '%s@%s' % (entry['tags'].split(',')[-1][7:], getfqdn())
 
                 if 'eventstart' in entry:
                     dtstart = datetime.strptime(entry['eventstart'], '%Y-%m-%dT%H:%M').replace(tzinfo=self._localtz)
@@ -219,9 +219,9 @@ class Remind(object):
         return list(self._reminders.keys())
 
     @staticmethod
-    def _get_uid(event):
+    def _get_uid(line):
         """UID of a remind line"""
-        return '%s@%s' % (event['tags'].split(',')[-1][7:], getfqdn())
+        return '%s@%s' % (md5(line.strip().encode('utf-8')).hexdigest(), getfqdn())
 
     def get_uids(self, filename=None):
         """UIDs of all reminders in the file excluding included files
