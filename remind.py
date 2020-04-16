@@ -255,7 +255,7 @@ class Remind(object):
         """
         self._update()
 
-        return self._vobject_etag(filename, uid)
+        return self._vobject_etag(filename, uid)[1:3]
 
     def to_vobjects(self, filename, uids=None):
         """Return iCal objects and etags of all Remind entries in uids
