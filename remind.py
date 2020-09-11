@@ -451,11 +451,12 @@ class Remind(object):
 
         if hasattr(vevent, 'rdate'):
             remind.append(Remind._parse_rdate(vevent.rdate.value))
-        elif isinstance(trigdates, str):
-            remind.append(trigdates)
 
         if hasattr(vevent, 'class'):
             remind.append('TAG %s' % Remind._abbr_tag(vevent.getChildValue('class')))
+
+        if isinstance(trigdates, str):
+            remind.append(trigdates)
 
         if tags:
             remind.extend(['TAG %s' % Remind._abbr_tag(tag) for tag in tags])
