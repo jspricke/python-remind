@@ -412,8 +412,12 @@ class Remind(object):
         if isinstance(dtend, datetime) and dtend.tzinfo:
             dtend = dtend.astimezone(self._localtz)
 
-        if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str) and (not hasattr(vevent, 'rrule') or vevent.rruleset._rrule[0]._freq != rrule.MONTHLY):
-            remind.append(dtstart.strftime('%b %d %Y').replace(' 0', ' '))
+        if not hasattr(vevent, 'rdate') and not isinstance(trigdates, str):
+            if not hasattr(vevent, 'rrule') or vevent.rruleset._rrule[0]._freq != rrule.MONTHLY:
+                remind.append(dtstart.strftime('%b %d %Y').replace(' 0', ' '))
+            elif hasattr(vevent, 'rrule') and vevent.rruleset._rrule[0]._freq == rrule.MONTHLY:
+                remind.extend(trigdates)
+                trigdates = dtstart.strftime("SATISFY [trigdate()>='%Y-%m-%d']")
 
         if postdate:
             remind.append(postdate)
