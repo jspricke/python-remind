@@ -314,6 +314,7 @@ class Remind(object):
         if rruleset._rrule[0]._freq == 0:
             return []
 
+        weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         rep = []
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             rep.append('*1')
@@ -321,14 +322,17 @@ class Remind(object):
             rep.append('*%d' % rruleset._rrule[0]._interval)
         elif rruleset._rrule[0]._freq == rrule.WEEKLY:
             rep.append('*%d' % (7 * rruleset._rrule[0]._interval))
-        elif rruleset._rrule[0]._freq == rrule.MONTHLY:
+        elif rruleset._rrule[0]._freq == rrule.MONTHLY and rruleset._rrule[0]._bymonthday:
             rep.append('%d' % rruleset._rrule[0]._bymonthday[0])
+        elif rruleset._rrule[0]._freq == rrule.MONTHLY and rruleset._rrule[0]._bynweekday:
+            daynum, week = rruleset._rrule[0]._bynweekday[0]
+            weekday = weekdays[daynum]
+            rep.append('%s %d' % (weekday, week * 7 - 6))
         else:
             return Remind._parse_rdate(rruleset._rrule[0])
 
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             daynums = set(range(7)) - set(rruleset._rrule[0]._byweekday)
-            weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
             days = [weekdays[day] for day in daynums]
             rep.append('SKIP OMIT %s' % ' '.join(days))
 
