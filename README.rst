@@ -74,6 +74,7 @@ iCalendar -> Remind
 ~~~~~~~~~~~~~~~~~~~
 
 * RECURRENCE-ID is not supported at the moment. This is a limitation of the used python-vobject library, see http://lists.skyhouseconsulting.com/pipermail/vobject/2009-September/000204.html.
+* Creating new calendars by adding includes to a main Remind file is not supported.
 
 Remind -> iCalendar
 ~~~~~~~~~~~~~~~~~~~
