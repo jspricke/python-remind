@@ -435,10 +435,13 @@ class Remind(object):
         duration = Remind._event_duration(vevent)
 
         if type(dtstart) is date and duration.days > 1:
-            remind.append('*1')
-            if dtend is not None:
-                dtend -= timedelta(days=1)
-                remind.append(dtend.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
+            # avoid adding an extra repeat clause.
+            # XXX: this is hacky and lossy
+            if not any(x.startswith('UNTIL ') for x in remind):
+                remind.append('*1')
+                if dtend is not None:
+                    dtend -= timedelta(days=1)
+                    remind.append(dtend.strftime('UNTIL %b %d %Y').replace(' 0', ' '))
 
         if isinstance(dtstart, datetime):
             remind.append(dtstart.strftime('AT %H:%M').replace(' 0', ' '))
