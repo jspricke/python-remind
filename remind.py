@@ -301,15 +301,19 @@ class Remind(object):
         return cal
 
     @staticmethod
-    def _parse_rdate(rdates):
+    def _parse_rdate(rdates, repeat=1):
         """Convert from iCal rdate to Remind trigdate syntax"""
-        trigdates = [rdate.strftime("trigdate()=='%Y-%m-%d'") for rdate in rdates]
+        trigdates = [(rdate + timedelta(days=d)).strftime("trigdate()=='%Y-%m-%d'") for
+                     rdate in rdates for d in range(repeat)]
         return 'SATISFY [%s]' % '||'.join(trigdates)
 
     @staticmethod
-    def _parse_rruleset(rruleset):
+    def _parse_rruleset(rruleset, duration):
         """Convert from iCal rrule to Remind recurrence syntax"""
         # pylint: disable=protected-access
+
+        if duration.days > 1:
+            return Remind._parse_rdate(rruleset._rrule[0], duration.days)
 
         if rruleset._rrule[0]._freq == 0:
             return []
@@ -400,9 +404,11 @@ class Remind(object):
         """Generate a Remind command from the given vevent"""
         remind = ['REM']
 
+        duration = Remind._event_duration(vevent)
+
         trigdates = None
         if hasattr(vevent, 'rrule'):
-            trigdates = Remind._parse_rruleset(vevent.rruleset)
+            trigdates = Remind._parse_rruleset(vevent.rruleset, duration)
 
         dtstart = vevent.dtstart.value
         # If we don't get timezone information, handle it as a naive datetime.
@@ -432,9 +438,7 @@ class Remind(object):
         if isinstance(trigdates, list):
             remind.extend(trigdates)
 
-        duration = Remind._event_duration(vevent)
-
-        if type(dtstart) is date and duration.days > 1:
+        if type(dtstart) is date and duration.days > 1 and not hasattr(vevent, 'rrule'):
             remind.append('*1')
             if dtend is not None:
                 dtend -= timedelta(days=1)
