@@ -24,7 +24,7 @@ from os.path import expanduser, getmtime, isfile
 from pytz import timezone
 from re import DOTALL, findall, match
 from socket import getfqdn
-from subprocess import Popen, PIPE
+from subprocess import run
 from threading import Lock
 from time import time
 from tzlocal import get_localzone
@@ -62,12 +62,19 @@ class Remind(object):
         cmd = ['remind', f'-ppp{self._month}', '-b2', '-y', '-df',
                filename, str(self._startdate)]
         try:
-            stdout, stderr = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE).communicate(input=lines.encode('utf-8'))
-        except OSError:
-            raise OSError('Error running: %s' % ' '.join(cmd))
+            process = run(cmd, input=lines, capture_output=True, text=True)
+        except FileNotFoundError:
+            raise FileExistsError('remind command not found, please install it')
+
+        if 'Unknown option' in process.stderr:
+            raise OSError(f'Error running: {" ".join(cmd)}, maybe old remind version')
+
+        err = list(set(findall(r"Can't open file: (.*)", process.stderr)))
+        if err:
+            raise FileExistsError(f'include file(s): {", ".join(err)} not found (please use absolute paths)')
 
         reminders = {}
-        for source in findall(r"Caching file `(.*)' in memory", stderr.decode('utf-8')):
+        for source in list(set(findall(r"Caching file `(.*)' in memory", process.stderr))):
             reminders[source] = {}
             if isfile(source):
                 # There is a race condition with the remind call above here.
@@ -75,7 +82,7 @@ class Remind(object):
                 if mtime > self._mtime:
                     self._mtime = mtime
 
-        for month in loads(stdout.decode('utf-8')):
+        for month in loads(process.stdout):
             for entry in month['entries']:
                 if 'passthru' in entry:
                     continue
