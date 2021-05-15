@@ -69,6 +69,9 @@ class Remind(object):
         if 'Unknown option' in process.stderr:
             raise OSError(f'Error running: {" ".join(cmd)}, maybe old remind version')
 
+        if f"Can't open file: {filename}" in process.stderr:
+            return {filename: {}}
+
         err = list(set(findall(r"Can't open file: (.*)", process.stderr)))
         if err:
             raise FileExistsError(f'include file(s): {", ".join(err)} not found (please use absolute paths)')
@@ -213,7 +216,7 @@ class Remind(object):
 
         with self._lock:
             for fname in self._reminders:
-                if getmtime(fname) > self._mtime:
+                if not isfile(fname) or getmtime(fname) > self._mtime:
                     update = True
                     break
 
