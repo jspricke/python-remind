@@ -21,14 +21,13 @@ from dateutil import rrule
 from hashlib import md5
 from json import loads
 from os.path import expanduser, getmtime, isfile
-from pytz import timezone
 from re import DOTALL, findall, match
 from socket import getfqdn
 from subprocess import run
 from threading import Lock
 from time import time
-from tzlocal import get_localzone
 from vobject import readOne, iCalendar
+from zoneinfo import ZoneInfo
 
 
 class Remind(object):
@@ -44,7 +43,7 @@ class Remind(object):
         startdate -- the date to start parsing, will be passed to remind
         month -- how many month to parse, will be passed to remind -s
         """
-        self._localtz = localtz if localtz else get_localzone()
+        self._localtz = localtz if localtz else ZoneInfo('localtime')
         self._filename = filename
         self._startdate = startdate
         self._month = month
@@ -608,7 +607,7 @@ def rem2ics():
                         help='Output iCalendar file (default: stdout)')
     args = parser.parse_args()
 
-    zone = timezone(args.zone) if args.zone else None
+    zone = ZoneInfo(args.zone) if args.zone else None
 
     if args.infile == '-':
         remind = Remind(args.infile, zone, args.startdate, args.month, timedelta(minutes=args.alarm))
@@ -649,7 +648,7 @@ def ics2rem():
                         help='Output Remind file (default: stdout)')
     args = parser.parse_args()
 
-    zone = timezone(args.zone) if args.zone else None
+    zone = ZoneInfo(args.zone) if args.zone else None
 
     vobject = readOne(args.infile.read())
     rem = Remind(localtz=zone).to_reminders(
