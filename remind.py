@@ -25,23 +25,25 @@ from socket import getfqdn
 from subprocess import run
 from threading import Lock
 from time import time
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 
 from dateutil import rrule
-from vobject import iCalendar, readOne
+from vobject import iCalendar
+from vobject.base import Component, readOne
 
 
-class Remind(object):
+class Remind:
     """Represents a collection of Remind files."""
 
     def __init__(
         self,
-        filename=expanduser("~/.reminders"),
-        localtz=None,
-        startdate=date.today() - timedelta(weeks=12),
-        month=15,
-        alarm=timedelta(minutes=-10),
-    ):
+        filename: str = expanduser("~/.reminders"),
+        localtz: Optional[ZoneInfo] = None,
+        startdate: date = date.today() - timedelta(weeks=12),
+        month: int = 15,
+        alarm: timedelta = timedelta(minutes=-10),
+    ) -> None:
         """Constructor.
 
         filename -- the remind file (included files will be used as well)
@@ -54,11 +56,13 @@ class Remind(object):
         self._startdate = startdate
         self._month = month
         self._lock = Lock()
-        self._reminders = {}
-        self._mtime = 0
+        self._reminders: Dict[str, Dict[str, Any]] = {}
+        self._mtime = 0.0
         self._alarm = alarm
 
-    def _parse_remind(self, filename, lines=""):
+    def _parse_remind(
+        self, filename: str, lines: str = ""
+    ) -> Dict[str, Dict[str, Any]]:
         """Call remind and parse output into a dict.
 
         filename -- the remind file (included files will be used as well)
@@ -90,7 +94,7 @@ class Remind(object):
                 f'include file(s): {", ".join(err)} not found (please use absolute paths)'
             )
 
-        reminders = {}
+        reminders: Dict[str, Dict[str, Any]] = {}
         for source in list(
             set(findall(r"Caching file `(.*)' in memory", process.stderr))
         ):
@@ -109,7 +113,7 @@ class Remind(object):
                 entry["uid"] = "%s@%s" % (entry["tags"].split(",")[-1][7:], getfqdn())
 
                 if "eventstart" in entry:
-                    dtstart = datetime.strptime(
+                    dtstart: Union[datetime, date] = datetime.strptime(
                         entry["eventstart"], "%Y-%m-%dT%H:%M"
                     ).replace(tzinfo=self._localtz)
                 else:
@@ -130,7 +134,7 @@ class Remind(object):
         return reminders
 
     @staticmethod
-    def _interval(dates):
+    def _interval(dates: List[date]) -> int:
         """Return the distance between all dates and 0 if they are different."""
         interval = (dates[1] - dates[0]).days
         last = dates[0]
@@ -141,7 +145,7 @@ class Remind(object):
         return interval
 
     @staticmethod
-    def _gen_dtend_rrule(dtstarts, vevent):
+    def _gen_dtend_rrule(dtstarts: List[date], vevent: Component) -> None:
         """Generate an rdate or rrule from a list of dates and add it to the vevent."""
         interval = Remind._interval(dtstarts)
         if interval > 0 and interval % 7 == 0:
@@ -183,7 +187,7 @@ class Remind(object):
             if not isinstance(dtstarts[0], datetime):
                 vevent.add("dtend").value = dtstarts[0] + timedelta(days=1)
 
-    def _gen_vevent(self, event, vevent):
+    def _gen_vevent(self, event: Dict[str, Any], vevent: Component) -> None:
         """Generate vevent from given event."""
         vevent.add("dtstart").value = event["dtstart"][0]
 
@@ -234,7 +238,7 @@ class Remind(object):
         if len(event["dtstart"]) > 1:
             Remind._gen_dtend_rrule(event["dtstart"], vevent)
 
-    def _update(self):
+    def _update(self) -> None:
         """Reload Remind files if the mtime is newer."""
         update = not self._reminders
 
@@ -256,17 +260,17 @@ class Remind(object):
             if update:
                 self._reminders = self._parse_remind(self._filename)
 
-    def get_filesnames(self):
+    def get_filesnames(self) -> List[str]:
         """All filenames parsed by remind (including included files)."""
         self._update()
         return list(self._reminders.keys())
 
     @staticmethod
-    def _get_uid(line):
+    def _get_uid(line: str) -> str:
         """UID of a remind line."""
         return "%s@%s" % (md5(line.strip().encode("utf-8")).hexdigest(), getfqdn())
 
-    def get_uids(self, filename=None):
+    def get_uids(self, filename: str = "") -> List[str]:
         """UIDs of all reminders in the file excluding included files.
 
         If a filename is specified, only it's UIDs are return, otherwise all.
@@ -278,10 +282,10 @@ class Remind(object):
         if filename:
             if filename not in self._reminders:
                 return []
-            return self._reminders[filename].keys()
+            return list(self._reminders[filename].keys())
         return [uid for uids in self._reminders.values() for uid in uids]
 
-    def _vobject_etag(self, filename, uid):
+    def _vobject_etag(self, filename: str, uid: str) -> Tuple[str, Component, str]:
         """Return iCal object and etag of one Remind entry.
 
         filename -- the remind file
@@ -291,7 +295,7 @@ class Remind(object):
         self._gen_vevent(self._reminders[filename][uid], cal.add("vevent"))
         return uid, cal, self.get_etag(cal)
 
-    def to_vobject_etag(self, filename, uid):
+    def to_vobject_etag(self, filename: str, uid: str) -> Tuple[Component, str]:
         """Return iCal object and etag of one Remind entry.
 
         filename -- the remind file
@@ -301,7 +305,9 @@ class Remind(object):
 
         return self._vobject_etag(filename, uid)[1:3]
 
-    def to_vobjects(self, filename, uids=None):
+    def to_vobjects(
+        self, filename: str, uids: Iterable[str] = []
+    ) -> List[Tuple[str, Component, str]]:
         """Return iCal objects and etags of all Remind entries in uids.
 
         filename -- the remind file
@@ -310,11 +316,11 @@ class Remind(object):
         self._update()
 
         if not uids:
-            uids = self._reminders[filename]
+            uids = list(self._reminders[filename].keys())
 
         return [self._vobject_etag(filename, uid) for uid in uids]
 
-    def to_vobject(self, filename=None, uid=None):
+    def to_vobject(self, filename: str = "", uid: str = "") -> Component:
         """Return iCal object of Remind lines.
 
         If filename and UID are specified, the vObject only contains that event.
@@ -339,7 +345,7 @@ class Remind(object):
                     self._gen_vevent(event, cal.add("vevent"))
         return cal
 
-    def stdin_to_vobject(self, lines):
+    def stdin_to_vobject(self, lines: str) -> Component:
         """Return iCal object of the Remind commands in lines."""
         cal = iCalendar()
         for event in self._parse_remind("-", lines)["-"].values():
@@ -347,7 +353,7 @@ class Remind(object):
         return cal
 
     @staticmethod
-    def _parse_rdate(rdates, repeat=1):
+    def _parse_rdate(rdates: List[date], repeat: int = 1) -> str:
         """Convert from iCal rdate to Remind trigdate syntax."""
         trigdates = [
             (rdate + timedelta(days=d)).strftime("trigdate()=='%Y-%m-%d'")
@@ -357,7 +363,7 @@ class Remind(object):
         return "SATISFY [%s]" % "||".join(trigdates)
 
     @staticmethod
-    def _parse_rruleset(rruleset, duration):
+    def _parse_rruleset(rruleset: Any, duration: timedelta) -> Union[str, List[str]]:
         """Convert from iCal rrule to Remind recurrence syntax."""
         # pylint: disable=protected-access
 
@@ -403,7 +409,7 @@ class Remind(object):
         return rep
 
     @staticmethod
-    def _event_duration(vevent):
+    def _event_duration(vevent: Component) -> timedelta:
         """Unify dtend and duration to the duration of the given vevent."""
         if hasattr(vevent, "dtend"):
             return vevent.dtend.value - vevent.dtstart.value
@@ -412,7 +418,7 @@ class Remind(object):
         return timedelta(0)
 
     @staticmethod
-    def _gen_msg(vevent, label, tail, sep):
+    def _gen_msg(vevent: Component, label: str, tail: str, sep: str) -> str:
         """Generate a Remind MSG from the given vevent."""
         rem = ["MSG"]
         msg = []
@@ -443,7 +449,7 @@ class Remind(object):
         return " ".join(rem)
 
     @staticmethod
-    def _rem_clean(rem):
+    def _rem_clean(rem: str) -> str:
         """Cleanup string for Remind.
 
         Strip, transform newlines, and escape '[' in string so it's acceptable
@@ -452,21 +458,21 @@ class Remind(object):
         return rem.strip().replace("%", "%%").replace("\n", "%_").replace("[", '["["]')
 
     @staticmethod
-    def _abbr_tag(tag):
+    def _abbr_tag(tag: str) -> str:
         """Transform a string so it's acceptable as a remind tag."""
         return tag.replace(" ", "")[:48]
 
     def to_remind(
         self,
-        vevent,
-        label=None,
-        priority=None,
-        tags=None,
-        tail=None,
-        sep=" ",
-        postdate=None,
-        posttime=None,
-    ):
+        vevent: Component,
+        label: str = "",
+        priority: str = "",
+        tags: str = "",
+        tail: str = "",
+        sep: str = " ",
+        postdate: str = "",
+        posttime: str = "",
+    ) -> str:
         """Generate a Remind command from the given vevent."""
         remind = ["REM"]
 
@@ -497,6 +503,7 @@ class Remind(object):
             elif (
                 hasattr(vevent, "rrule")
                 and vevent.rruleset._rrule[0]._freq == rrule.MONTHLY
+                and trigdates
             ):
                 remind.extend(trigdates)
                 trigdates = dtstart.strftime("SATISFY [trigdate()>='%Y-%m-%d']")
@@ -550,15 +557,15 @@ class Remind(object):
 
     def to_reminders(
         self,
-        ical,
-        label=None,
-        priority=None,
-        tags=None,
-        tail=None,
-        sep=" ",
-        postdate=None,
-        posttime=None,
-    ):
+        ical: Component,
+        label: str = "",
+        priority: str = "",
+        tags: str = "",
+        tail: str = "",
+        sep: str = " ",
+        postdate: str = "",
+        posttime: str = "",
+    ) -> str:
         """Return Remind commands for all events of a iCalendar."""
         if not hasattr(ical, "vevent_list"):
             return ""
@@ -569,7 +576,7 @@ class Remind(object):
         ]
         return "".join(reminders)
 
-    def append_vobject(self, ical, filename=None):
+    def append_vobject(self, ical: Component, filename: str = "") -> str:
         """Append a Remind command generated from the iCalendar to the file."""
         if not filename:
             filename = self._filename
@@ -582,7 +589,7 @@ class Remind(object):
 
         return Remind._get_uid(outdat)
 
-    def remove(self, uid, filename=None):
+    def remove(self, uid: str, filename: str = "") -> None:
         """Remove the Remind command with the uid from the file."""
         if not filename:
             filename = self._filename
@@ -599,7 +606,7 @@ class Remind(object):
                     open(filename, "w").writelines(rem)
                     break
 
-    def replace_vobject(self, uid, ical, filename=None):
+    def replace_vobject(self, uid: str, ical: Component, filename: str = "") -> str:
         """Update the Remind command with the uid in the file with the new iCalendar."""
         if not filename:
             filename = self._filename
@@ -617,7 +624,7 @@ class Remind(object):
                     open(filename, "w").writelines(rem)
                     return new_uid
 
-    def move_vobject(self, uid, from_file, to_file):
+    def move_vobject(self, uid: str, from_file: str, to_file: str) -> None:
         """Move the Remind command with the uid from from_file to to_file."""
         if from_file not in self._reminders or to_file not in self._reminders:
             return
@@ -633,16 +640,16 @@ class Remind(object):
                     open(to_file, "a").write(line)
                     break
 
-    def get_meta(self):
+    def get_meta(self) -> Dict[str, str]:
         """Meta tags of the vObject collection."""
         return {"tag": "VCALENDAR", "C:supported-calendar-component-set": "VEVENT"}
 
-    def last_modified(self):
+    def last_modified(self) -> float:
         """Last time the Remind files where parsed."""
         self._update()
         return self._mtime
 
-    def get_etag(self, vobject):
+    def get_etag(self, vobject: Component) -> str:
         """Generate an etag for the given vobject.
 
         This sets the dtstamp to epoch 0 to generate a deterministic result as
@@ -660,7 +667,7 @@ class Remind(object):
         return '"%s"' % etag.hexdigest()
 
 
-def rem2ics():
+def rem2ics() -> None:
     """Command line tool to convert from Remind to iCalendar."""
     # pylint: disable=maybe-no-member
     from argparse import ArgumentParser, FileType
@@ -724,7 +731,7 @@ def rem2ics():
         args.outfile.write(remind.to_vobject().serialize())
 
 
-def ics2rem():
+def ics2rem() -> None:
     """Command line tool to convert from iCalendar to Remind."""
     from argparse import ArgumentParser, FileType
     from sys import stdin, stdout
