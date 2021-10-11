@@ -80,7 +80,7 @@ class Remind:
         try:
             process = run(cmd, input=lines, capture_output=True, text=True)
         except FileNotFoundError:
-            raise FileExistsError("remind command not found, please install it")
+            raise FileNotFoundError("remind command not found, please install it")
 
         if "Unknown option" in process.stderr:
             raise OSError(f'Error running: {" ".join(cmd)}, maybe old remind version')
@@ -90,7 +90,7 @@ class Remind:
 
         err = list(set(findall(r"Can't open file: (.*)", process.stderr)))
         if err:
-            raise FileExistsError(
+            raise FileNotFoundError(
                 f'include file(s): {", ".join(err)} not found (please use absolute paths)'
             )
 
@@ -580,8 +580,6 @@ class Remind:
         """Append a Remind command generated from the iCalendar to the file."""
         if not filename:
             filename = self._filename
-        elif filename not in self._reminders:
-            return
 
         with self._lock:
             outdat = self.to_reminders(ical)
@@ -593,8 +591,6 @@ class Remind:
         """Remove the Remind command with the uid from the file."""
         if not filename:
             filename = self._filename
-        elif filename not in self._reminders:
-            return
 
         uid = uid.split("@")[0]
 
@@ -610,8 +606,6 @@ class Remind:
         """Update the Remind command with the uid in the file with the new iCalendar."""
         if not filename:
             filename = self._filename
-        elif filename not in self._reminders:
-            return
 
         uid = uid.split("@")[0]
 
@@ -623,12 +617,10 @@ class Remind:
                     new_uid = self._get_uid(rem[index])
                     open(filename, "w").writelines(rem)
                     return new_uid
+        raise ValueError(f"Failed to find uid {uid} in {filename}")
 
     def move_vobject(self, uid: str, from_file: str, to_file: str) -> None:
         """Move the Remind command with the uid from from_file to to_file."""
-        if from_file not in self._reminders or to_file not in self._reminders:
-            return
-
         uid = uid.split("@")[0]
 
         with self._lock:
