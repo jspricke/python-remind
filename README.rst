@@ -26,7 +26,7 @@ Using python-setuptools
 
 ::
 
-  $ python setup.py install
+  $ python3 setup.py install
 
 Set up a Remind CalDAV server
 -----------------------------
