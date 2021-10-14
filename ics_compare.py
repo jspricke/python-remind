@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Python tool to compare two iCalendar files (specifically for python-remind)
 #
-# Copyright (C) 2014-2015  Jochen Sprickerhof
+# Copyright (C) 2014-2021  Jochen Sprickerhof
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,38 +17,62 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from vobject import readComponents, iCalendar
 from argparse import ArgumentParser
 
+from vobject import iCalendar
+from vobject.base import Component, readComponents
 
-def compare(first_in, second_in, second_out):
+
+def compare(first_in: Component, second_in: Component, second_out: Component) -> None:
     for (j, second) in enumerate(second_in.vevent_list):
         found = False
         for (i, first) in enumerate(first_in.vevent_list):
             wrong = False
-            for attr in ['dtstart', 'summary', 'location' 'description', 'recurrence_id', 'rdate', 'rrule']:
+            for attr in [
+                "dtstart",
+                "summary",
+                "location" "description",
+                "recurrence_id",
+                "rdate",
+                "rrule",
+            ]:
                 if hasattr(first, attr):
-                    if hasattr(second, attr) and first.contents.get(attr)[0].value != second.contents.get(attr)[0].value:
+                    if (
+                        hasattr(second, attr)
+                        and first.contents.get(attr)[0].value
+                        != second.contents.get(attr)[0].value
+                    ):
                         wrong = True
                         break
                     if not hasattr(second, attr):
                         wrong = True
                         break
 
-            if hasattr(first, 'dtend'):
-                if hasattr(second, 'dtend') and first.dtend.value != second.dtend.value:
+            if hasattr(first, "dtend"):
+                if hasattr(second, "dtend") and first.dtend.value != second.dtend.value:
                     wrong = True
-                elif hasattr(second, 'duration') and first.dtend.value != second.dtstart.value + second.duration.value:
+                elif (
+                    hasattr(second, "duration")
+                    and first.dtend.value
+                    != second.dtstart.value + second.duration.value
+                ):
                     wrong = True
-                elif not (hasattr(second, 'dtend') or hasattr(second, 'duration')):
+                elif not (hasattr(second, "dtend") or hasattr(second, "duration")):
                     wrong = True
 
-            if hasattr(first, 'duration'):
-                if hasattr(second, 'duration') and first.duration.value != second.duration.value:
+            if hasattr(first, "duration"):
+                if (
+                    hasattr(second, "duration")
+                    and first.duration.value != second.duration.value
+                ):
                     wrong = True
-                elif hasattr(second, 'dtend') and first.duration.value != second.dtend.value - second.dtstart.value:
+                elif (
+                    hasattr(second, "dtend")
+                    and first.duration.value
+                    != second.dtend.value - second.dtstart.value
+                ):
                     wrong = True
-                elif not (hasattr(second, 'dtend') or hasattr(second, 'duration')):
+                elif not (hasattr(second, "dtend") or hasattr(second, "duration")):
                     wrong = True
 
             if wrong:
@@ -61,12 +85,12 @@ def compare(first_in, second_in, second_out):
             second_out.add(second)
 
 
-def main():
-    parser = ArgumentParser(description='Compare two iCalendar files semantically')
-    parser.add_argument('first_input', help='First iCalendar file input')
-    parser.add_argument('second_input', help='Second iCalendar file input')
-    parser.add_argument('first_output', help='First iCalendar file output')
-    parser.add_argument('second_output', help='Second iCalendar file output')
+def main() -> None:
+    parser = ArgumentParser(description="Compare two iCalendar files semantically")
+    parser.add_argument("first_input", help="First iCalendar file input")
+    parser.add_argument("second_input", help="Second iCalendar file input")
+    parser.add_argument("first_output", help="First iCalendar file output")
+    parser.add_argument("second_output", help="Second iCalendar file output")
     args = parser.parse_args()
     first_cal = next(readComponents(open(args.first_input)))
     second_cal = next(readComponents(open(args.second_input)))
@@ -74,9 +98,9 @@ def main():
 
     compare(first_cal, second_cal, second_out)
 
-    open(args.first_output, 'w').write(first_cal.serialize())
-    open(args.second_output, 'w').write(second_out.serialize())
+    open(args.first_output, "w").write(first_cal.serialize())
+    open(args.second_output, "w").write(second_out.serialize())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
