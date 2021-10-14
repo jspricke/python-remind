@@ -26,7 +26,6 @@ setup(name='remind',
           'console_scripts': [
               'rem2ics = remind:rem2ics',
               'ics2rem = remind:ics2rem',
-              'icscomp = ics_compare:main',
           ]
       },
 
