@@ -192,7 +192,7 @@ class Remind:
         vevent.add("dtstart").value = event["dtstart"][0]
 
         msg = event["body"].strip().replace('["["]', "[")
-        groups = match(r'%"(.*)%"(.*)', msg, DOTALL)
+        groups = match(r'%"(.*)%" (.*)', msg, DOTALL)
         if groups:
             msg = groups[1]
             vevent.add("description").value = groups[2]

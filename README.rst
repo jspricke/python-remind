@@ -63,7 +63,7 @@ Format of the Remind MSG body
 
 ::
 
-  %" summary at location %" description
+  %"summary at location%" description
 
 The ``%"`` is omitted, if there is no description in the iCalendar.
 
