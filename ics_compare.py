@@ -40,19 +40,16 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
                     hasattr(first, attr)
                     and first.contents.get(attr)
                     and first.contents.get(attr)[0].value
-                ):
-                    if (
+                    and not (
                         hasattr(second, attr)
                         and second.contents.get(attr)
                         and second.contents.get(attr)[0].value
                         and first.contents.get(attr)[0].value
-                        != second.contents.get(attr)[0].value
-                    ):
-                        wrong = True
-                        break
-                    if not hasattr(second, attr):
-                        wrong = True
-                        break
+                        == second.contents.get(attr)[0].value
+                    )
+                ):
+                    wrong = True
+                    break
 
             if hasattr(first, "dtend"):
                 if hasattr(second, "dtend") and first.dtend.value != second.dtend.value:
