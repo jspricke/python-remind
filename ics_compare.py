@@ -34,7 +34,6 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
                 "location",
                 "description",
                 "recurrence_id",
-                "rdate",
             ]:
                 if (
                     hasattr(first, attr)
@@ -103,10 +102,34 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
 
             if hasattr(first, "rruleset") and first.rruleset:
                 if (
-                    not hasattr(second, "rruleset")
-                    or not second.rruleset
-                    or list(first.rruleset) != list(second.rruleset)
+                    hasattr(second, "rruleset")
+                    and second.rruleset
+                    and list(first.rruleset) != list(second.rruleset)
                 ):
+                    wrong = True
+                elif (
+                    hasattr(second, "rdate")
+                    and second.rdate.value
+                    and list(first.rruleset) != second.rdate.value
+                ):
+                    wrong = True
+                elif not (hasattr(second, "rruleset") or hasattr(second, "rdate")):
+                    wrong = True
+
+            if hasattr(first, "rdate") and first.rdate.value:
+                if (
+                    hasattr(second, "rdate")
+                    and second.rdate.value
+                    and first.rdate.value != second.rdate.value
+                ):
+                    wrong = True
+                elif (
+                    hasattr(second, "rruleset")
+                    and second.rruleset
+                    and first.rdate.value != list(second.rruleset)
+                ):
+                    wrong = True
+                elif not (hasattr(second, "rruleset") or hasattr(second, "rdate")):
                     wrong = True
 
             if wrong:
