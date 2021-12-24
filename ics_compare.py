@@ -31,14 +31,21 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
             for attr in [
                 "dtstart",
                 "summary",
-                "location" "description",
+                "location",
+                "description",
                 "recurrence_id",
                 "rdate",
                 "rrule",
             ]:
-                if hasattr(first, attr):
+                if (
+                    hasattr(first, attr)
+                    and first.contents.get(attr)
+                    and first.contents.get(attr)[0].value
+                ):
                     if (
                         hasattr(second, attr)
+                        and second.contents.get(attr)
+                        and second.contents.get(attr)[0].value
                         and first.contents.get(attr)[0].value
                         != second.contents.get(attr)[0].value
                     ):
