@@ -35,7 +35,6 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
                 "description",
                 "recurrence_id",
                 "rdate",
-                "rrule",
             ]:
                 if (
                     hasattr(first, attr)
@@ -80,6 +79,14 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
                 ):
                     wrong = True
                 elif not (hasattr(second, "dtend") or hasattr(second, "duration")):
+                    wrong = True
+
+            if hasattr(first, "rruleset") and first.rruleset:
+                if (
+                    not hasattr(second, "rruleset")
+                    or not second.rruleset
+                    or list(first.rruleset) != list(second.rruleset)
+                ):
                     wrong = True
 
             if wrong:
