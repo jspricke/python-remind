@@ -94,7 +94,7 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
 
             found = True
             first_in.remove(first)
-            print("matching %d to %d" % (i, j))
+            print(f"matching {i} to {j}")
         if not found:
             second_out.add(second)
 
@@ -106,14 +106,18 @@ def main() -> None:
     parser.add_argument("first_output", help="First iCalendar file output")
     parser.add_argument("second_output", help="Second iCalendar file output")
     args = parser.parse_args()
-    first_cal = next(readComponents(open(args.first_input)))
-    second_cal = next(readComponents(open(args.second_input)))
+    with open(args.first_input, encoding="utf-8") as infile:
+        first_cal = next(readComponents(infile))
+    with open(args.second_input, encoding="utf-8") as infile:
+        second_cal = next(readComponents(infile))
     second_out = iCalendar()
 
     compare(first_cal, second_cal, second_out)
 
-    open(args.first_output, "w").write(first_cal.serialize())
-    open(args.second_output, "w").write(second_out.serialize())
+    with open(args.first_output, "w", encoding="utf-8") as outfile:
+        outfile.write(first_cal.serialize())
+    with open(args.second_output, "w", encoding="utf-8") as outfile:
+        outfile.write(second_out.serialize())
 
 
 if __name__ == "__main__":

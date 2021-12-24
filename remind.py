@@ -79,8 +79,10 @@ class Remind:
         ]
         try:
             process = run(cmd, input=lines, capture_output=True, text=True)
-        except FileNotFoundError:
-            raise FileNotFoundError("remind command not found, please install it")
+        except FileNotFoundError as error:
+            raise FileNotFoundError(
+                "remind command not found, please install it"
+            ) from error
 
         if "Unknown option" in process.stderr:
             raise OSError(f'Error running: {" ".join(cmd)}, maybe old remind version')
@@ -110,7 +112,7 @@ class Remind:
                 if "passthru" in entry:
                     continue
 
-                entry["uid"] = "%s@%s" % (entry["tags"].split(",")[-1][7:], getfqdn())
+                entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{getfqdn()}"
 
                 if "eventstart" in entry:
                     dtstart: Union[datetime, date] = datetime.strptime(
@@ -268,7 +270,7 @@ class Remind:
     @staticmethod
     def _get_uid(line: str) -> str:
         """UID of a remind line."""
-        return "%s@%s" % (md5(line.strip().encode("utf-8")).hexdigest(), getfqdn())
+        return f"{md5(line.strip().encode('utf-8')).hexdigest()}@{getfqdn()}"
 
     def get_uids(self, filename: str = "") -> list[str]:
         """UIDs of all reminders in the file excluding included files.
@@ -306,7 +308,7 @@ class Remind:
         return self._vobject_etag(filename, uid)[1:3]
 
     def to_vobjects(
-        self, filename: str, uids: Iterable[str] = []
+        self, filename: str, uids: Iterable[str] = None
     ) -> list[tuple[str, Component, str]]:
         """Return iCal objects and etags of all Remind entries in uids.
 
@@ -340,8 +342,8 @@ class Remind:
             for event in self._reminders[filename].values():
                 self._gen_vevent(event, cal.add("vevent"))
         else:
-            for filename in self._reminders:
-                for event in self._reminders[filename].values():
+            for events in self._reminders.values():
+                for event in events.values():
                     self._gen_vevent(event, cal.add("vevent"))
         return cal
 
@@ -360,7 +362,7 @@ class Remind:
             for rdate in rdates
             for d in range(repeat)
         ]
-        return "SATISFY [%s]" % "||".join(trigdates)
+        return f"SATISFY [{'||'.join(trigdates)}]"
 
     @staticmethod
     def _parse_rruleset(rruleset: Any, duration: timedelta) -> Union[str, list[str]]:
@@ -378,26 +380,26 @@ class Remind:
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             rep.append("*1")
         elif rruleset._rrule[0]._freq == rrule.DAILY:
-            rep.append("*%d" % rruleset._rrule[0]._interval)
+            rep.append(f"*{rruleset._rrule[0]._interval}")
         elif rruleset._rrule[0]._freq == rrule.WEEKLY:
-            rep.append("*%d" % (7 * rruleset._rrule[0]._interval))
+            rep.append(f"*{(7 * rruleset._rrule[0]._interval)}")
         elif (
             rruleset._rrule[0]._freq == rrule.MONTHLY and rruleset._rrule[0]._bymonthday
         ):
-            rep.append("%d" % rruleset._rrule[0]._bymonthday[0])
+            rep.append(str(rruleset._rrule[0]._bymonthday[0]))
         elif (
             rruleset._rrule[0]._freq == rrule.MONTHLY and rruleset._rrule[0]._bynweekday
         ):
             daynum, week = rruleset._rrule[0]._bynweekday[0]
             weekday = weekdays[daynum]
-            rep.append("%s %d" % (weekday, week * 7 - 6))
+            rep.append(f"{weekday} {week * 7 - 6}")
         else:
             return Remind._parse_rdate(rruleset._rrule[0])
 
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             daynums = set(range(7)) - set(rruleset._rrule[0]._byweekday)
             days = [weekdays[day] for day in daynums]
-            rep.append("SKIP OMIT %s" % " ".join(days))
+            rep.append(f"SKIP OMIT {' '.join(days)}")
 
         if rruleset._rrule[0]._until:
             rep.append(
@@ -413,7 +415,7 @@ class Remind:
         """Unify dtend and duration to the duration of the given vevent."""
         if hasattr(vevent, "dtend"):
             return vevent.dtend.value - vevent.dtstart.value
-        elif hasattr(vevent, "duration") and vevent.duration.value:
+        if hasattr(vevent, "duration") and vevent.duration.value:
             return vevent.duration.value
         return timedelta(0)
 
@@ -431,12 +433,12 @@ class Remind:
             msg.append("empty reminder")
 
         if hasattr(vevent, "location") and vevent.location.value:
-            msg.append("at %s" % Remind._rem_clean(vevent.location.value))
+            msg.append(f"at {Remind._rem_clean(vevent.location.value)}")
 
         has_desc = hasattr(vevent, "description") and vevent.description.value.strip()
 
         if tail or has_desc:
-            rem.append('%%"%s%%"' % " ".join(msg))
+            rem.append(f'%"{" ".join(msg)}%"')
         else:
             rem.append(" ".join(msg))
 
@@ -512,7 +514,7 @@ class Remind:
             remind.append(postdate)
 
         if priority:
-            remind.append("PRIORITY %s" % priority)
+            remind.append(f"PRIORITY {priority}")
 
         if isinstance(trigdates, list):
             remind.extend(trigdates)
@@ -530,26 +532,25 @@ class Remind:
                 remind.append(posttime)
 
             if duration.total_seconds() > 0:
-                remind.append(
-                    "DURATION %d:%02d" % divmod(duration.total_seconds() / 60, 60)
-                )
+                hours, minutes = divmod(duration.total_seconds() / 60, 60)
+                remind.append(f"DURATION {hours:.0f}:{minutes:02.0f}")
 
         if hasattr(vevent, "rdate"):
             remind.append(Remind._parse_rdate(vevent.rdate.value))
 
         if hasattr(vevent, "class"):
-            remind.append("TAG %s" % Remind._abbr_tag(vevent.getChildValue("class")))
+            remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('class'))}")
 
         if isinstance(trigdates, str):
             remind.append(trigdates)
 
         if tags:
-            remind.extend(["TAG %s" % Remind._abbr_tag(tag) for tag in tags])
+            remind.extend([f"TAG {Remind._abbr_tag(tag) for tag in tags}"])
 
         if hasattr(vevent, "categories_list"):
             for categories in vevent.categories_list:
                 for category in categories.value:
-                    remind.append("TAG %s" % Remind._abbr_tag(category))
+                    remind.append(f"TAG {Remind._abbr_tag(category)}")
 
         remind.append(Remind._gen_msg(vevent, label, tail, sep))
 
@@ -583,7 +584,8 @@ class Remind:
 
         with self._lock:
             outdat = self.to_reminders(ical)
-            open(filename, "a").write(outdat)
+            with open(filename, "a", encoding="utf-8") as outfile:
+                outfile.write(outdat)
 
         return Remind._get_uid(outdat)
 
@@ -595,11 +597,13 @@ class Remind:
         uid = uid.split("@")[0]
 
         with self._lock:
-            rem = open(filename).readlines()
+            with open(filename, encoding="utf-8") as infile:
+                rem = infile.readlines()
             for (index, line) in enumerate(rem):
                 if uid == md5(line.strip().encode("utf-8")).hexdigest():
                     del rem[index]
-                    open(filename, "w").writelines(rem)
+                    with open(filename, "w", encoding="utf-8") as outfile:
+                        outfile.writelines(rem)
                     break
 
     def replace_vobject(self, uid: str, ical: Component, filename: str = "") -> str:
@@ -610,12 +614,14 @@ class Remind:
         uid = uid.split("@")[0]
 
         with self._lock:
-            rem = open(filename).readlines()
+            with open(filename, encoding="utf-8") as infile:
+                rem = infile.readlines()
             for (index, line) in enumerate(rem):
                 if uid == md5(line.strip().encode("utf-8")).hexdigest():
                     rem[index] = self.to_reminders(ical)
                     new_uid = self._get_uid(rem[index])
-                    open(filename, "w").writelines(rem)
+                    with open(filename, "w", encoding="utf-8") as outfile:
+                        outfile.writelines(rem)
                     return new_uid
         raise ValueError(f"Failed to find uid {uid} in {filename}")
 
@@ -624,15 +630,19 @@ class Remind:
         uid = uid.split("@")[0]
 
         with self._lock:
-            rem = open(from_file).readlines()
+            with open(from_file, encoding="utf-8") as infile:
+                rem = infile.readlines()
             for (index, line) in enumerate(rem):
                 if uid == md5(line.strip().encode("utf-8")).hexdigest():
                     del rem[index]
-                    open(from_file, "w").writelines(rem)
-                    open(to_file, "a").write(line)
+                    with open(from_file, "w", encoding="utf-8") as outfile:
+                        outfile.writelines(rem)
+                    with open(to_file, "a", encoding="utf-8") as outfile:
+                        outfile.writelines(rem)
                     break
 
-    def get_meta(self) -> dict[str, str]:
+    @staticmethod
+    def get_meta() -> dict[str, str]:
         """Meta tags of the vObject collection."""
         return {"tag": "VCALENDAR", "C:supported-calendar-component-set": "VEVENT"}
 
@@ -641,7 +651,8 @@ class Remind:
         self._update()
         return self._mtime
 
-    def get_etag(self, vobject: Component) -> str:
+    @staticmethod
+    def get_etag(vobject: Component) -> str:
         """Generate an etag for the given vobject.
 
         This sets the dtstamp to epoch 0 to generate a deterministic result as
@@ -656,7 +667,7 @@ class Remind:
             vevent.dtstamp.value = datetime.fromtimestamp(0)
         etag = md5()
         etag.update(vobject_copy.serialize().encode("utf-8"))
-        return '"%s"' % etag.hexdigest()
+        return f'"{etag.hexdigest()}"'
 
 
 def rem2ics() -> None:
