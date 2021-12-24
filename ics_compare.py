@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from argparse import ArgumentParser
+from datetime import datetime
 
 from vobject import iCalendar
 from vobject.base import Component, readComponents
@@ -29,7 +30,6 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
         for (i, first) in enumerate(first_in.vevent_list):
             wrong = False
             for attr in [
-                "dtstart",
                 "summary",
                 "location",
                 "description",
@@ -51,8 +51,31 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
                     wrong = True
                     break
 
+            # ignore timezone when comparing dates (not supported by remind)
+            if hasattr(first, "dtstart") and not (
+                hasattr(second, "dtstart")
+                and (
+                    (
+                        isinstance(first.dtstart.value, datetime)
+                        and isinstance(second.dtstart.value, datetime)
+                        and first.dtstart.value.timestamp()
+                        == second.dtstart.value.timestamp()
+                    )
+                    or first.dtstart.value == second.dtstart.value
+                )
+            ):
+                wrong = True
+
             if hasattr(first, "dtend"):
-                if hasattr(second, "dtend") and first.dtend.value != second.dtend.value:
+                if hasattr(second, "dtend") and (
+                    (
+                        isinstance(first.dtend.value, datetime)
+                        and isinstance(second.dtend.value, datetime)
+                        and first.dtend.value.timestamp()
+                        != second.dtend.value.timestamp()
+                    )
+                    or first.dtend.value != second.dtend.value
+                ):
                     wrong = True
                 elif (
                     hasattr(second, "duration")
