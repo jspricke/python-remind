@@ -38,11 +38,11 @@ class Remind:
 
     def __init__(
         self,
-        filename: str = expanduser("~/.reminders"),
+        filename: str = None,
         localtz: Optional[ZoneInfo] = None,
-        startdate: date = date.today() - timedelta(weeks=12),
+        startdate: date = None,
         month: int = 15,
-        alarm: timedelta = timedelta(minutes=-10),
+        alarm: timedelta = None,
     ) -> None:
         """Constructor.
 
@@ -51,14 +51,14 @@ class Remind:
         startdate -- the date to start parsing, will be passed to remind
         month -- how many month to parse, will be passed to remind -s
         """
+        self._filename = filename if filename else expanduser("~/.reminders")
         self._localtz = localtz if localtz else ZoneInfo("localtime")
-        self._filename = filename
-        self._startdate = startdate
+        self._startdate = startdate if startdate else date.today() - timedelta(weeks=12)
         self._month = month
+        self._alarm = alarm if alarm else timedelta(minutes=-10)
         self._lock = Lock()
         self._reminders: dict[str, dict[str, Any]] = {}
         self._mtime = 0.0
-        self._alarm = alarm
 
     def _parse_remind(
         self, filename: str, lines: str = ""
