@@ -18,7 +18,6 @@ setup(
         "Topic :: Office/Business :: Scheduling",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    setup_requires=["nose>=1.3", "coverage"],
     install_requires=["python-dateutil", "vobject"],
     py_modules=["remind", "ics_compare"],
     entry_points={
@@ -27,5 +26,4 @@ setup(
             "ics2rem = remind:ics2rem",
         ]
     },
-    test_suite="nose.collector",
 )
