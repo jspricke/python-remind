@@ -18,7 +18,7 @@
 
 from datetime import date, datetime, timedelta
 from hashlib import md5
-from json import loads
+from json import loads, JSONDecodeError
 from os.path import expanduser, getmtime, isfile
 from re import DOTALL, findall, match
 from socket import getfqdn
@@ -107,7 +107,12 @@ class Remind:
                 if mtime > self._mtime:
                     self._mtime = mtime
 
-        for month in loads(process.stdout):
+        try:
+            months = loads(process.stdout)
+        except JSONDecodeError as exc:
+            raise OSError(f'Error parsing: {" ".join(cmd)}, maybe old remind version') from exc
+
+        for month in months:
             for entry in month["entries"]:
                 if "passthru" in entry:
                     continue
