@@ -28,7 +28,7 @@ from time import time
 from typing import Any, Iterable, Optional, Union
 from zoneinfo import ZoneInfo
 
-from dateutil import rrule
+from dateutil import rrule, tz
 from vobject import iCalendar
 from vobject.base import Component, readOne
 
@@ -52,7 +52,7 @@ class Remind:
         month -- how many month to parse, will be passed to remind -s
         """
         self._filename = filename if filename else expanduser("~/.reminders")
-        self._localtz = localtz if localtz else ZoneInfo("localtime")
+        self._localtz = localtz if localtz else tz.gettz()
         self._startdate = startdate if startdate else date.today() - timedelta(weeks=12)
         self._month = month
         self._alarm = alarm if alarm else timedelta(minutes=-10)
@@ -117,7 +117,7 @@ class Remind:
                 if "eventstart" in entry:
                     dtstart: Union[datetime, date] = datetime.strptime(
                         entry["eventstart"], "%Y-%m-%dT%H:%M"
-                    ).replace(tzinfo=self._localtz)
+                    ).astimezone(self._localtz)
                 else:
                     dtstart = datetime.strptime(entry["date"], "%Y-%m-%d").date()
 
