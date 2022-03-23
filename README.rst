@@ -7,7 +7,7 @@ Can be used stand alone (provided rem2ics and ics2rem tools) as well as integrat
 Installation
 ------------
 
-You need to have the Remind command line tool in version 03.03.01 or higher installed.
+You need to have the Remind command line tool in version 04.00.00 or higher installed.
 For Debian/Ubuntu use::
 
   $ sudo apt-get install remind

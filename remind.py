@@ -70,7 +70,7 @@ class Remind:
         """
         cmd = [
             "remind",
-            f"-ppp{self._month}",
+            f"-pppq{self._month}",
             "-b2",
             "-y",
             "-df",
