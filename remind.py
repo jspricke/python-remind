@@ -16,19 +16,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Python library to convert between Remind and iCalendar."""
 
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from hashlib import md5
-from json import loads, JSONDecodeError
+from json import JSONDecodeError, loads
 from os.path import expanduser, getmtime, isfile
 from re import DOTALL, findall, match
 from socket import getfqdn
 from subprocess import run
 from threading import Lock
 from time import time
-from typing import Any, Iterable, Optional, Union
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from dateutil import rrule, tz
+
 from vobject import iCalendar
 from vobject.base import Component, readOne
 
@@ -39,7 +41,7 @@ class Remind:
     def __init__(
         self,
         filename: str = None,
-        localtz: Optional[ZoneInfo] = None,
+        localtz: None | ZoneInfo = None,
         startdate: date = None,
         month: int = 15,
         alarm: timedelta = None,
@@ -120,7 +122,7 @@ class Remind:
                 entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{getfqdn()}"
 
                 if "eventstart" in entry:
-                    dtstart: Union[datetime, date] = datetime.strptime(
+                    dtstart: datetime | date = datetime.strptime(
                         entry["eventstart"], "%Y-%m-%dT%H:%M"
                     ).astimezone(self._localtz)
                 else:
@@ -370,7 +372,7 @@ class Remind:
         return f"SATISFY [{'||'.join(trigdates)}]"
 
     @staticmethod
-    def _parse_rruleset(rruleset: Any, duration: timedelta) -> Union[str, list[str]]:
+    def _parse_rruleset(rruleset: Any, duration: timedelta) -> str | list[str]:
         """Convert from iCal rrule to Remind recurrence syntax."""
         # pylint: disable=protected-access
 
