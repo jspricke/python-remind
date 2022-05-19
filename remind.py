@@ -78,7 +78,7 @@ class Remind:
             str(self._startdate),
         ]
         try:
-            process = run(cmd, input=lines, capture_output=True, text=True)
+            process = run(cmd, input=lines, capture_output=True, check=False, text=True)
         except FileNotFoundError as error:
             raise FileNotFoundError(
                 "remind command not found, please install it"
