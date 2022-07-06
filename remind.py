@@ -725,6 +725,10 @@ def rem2ics() -> None:
     )
     args = parser.parse_args()
 
+    if args.infile and args.infile != '-' and not isfile(args.infile):
+        args.outfile = open(args.infile, "w", encoding="utf-8")
+        args.infile = None
+
     zone = ZoneInfo(args.zone) if args.zone else None
 
     if args.infile == "-":
