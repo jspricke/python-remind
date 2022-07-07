@@ -364,12 +364,15 @@ class Remind:
     @staticmethod
     def _parse_rdate(rdates: list[date], repeat: int = 1) -> str:
         """Convert from iCal rdate to Remind trigdate syntax."""
+        rdates = sorted(rdates)
+        start = rdates[0].strftime("FROM %Y-%m-%d")
         trigdates = [
             (rdate + timedelta(days=d)).strftime("$T=='%Y-%m-%d'")
             for rdate in rdates
             for d in range(repeat)
         ]
-        return f"SATISFY [{'||'.join(trigdates)}]"
+        end = (rdates[-1] + timedelta(days=repeat-1)).strftime("UNTIL %Y-%m-%d")
+        return f"{start} {end} SATISFY [{'||'.join(trigdates)}]"
 
     @staticmethod
     def _parse_rruleset(rruleset: Any, duration: timedelta) -> str | list[str]:
