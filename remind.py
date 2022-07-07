@@ -365,7 +365,7 @@ class Remind:
     def _parse_rdate(rdates: list[date], repeat: int = 1) -> str:
         """Convert from iCal rdate to Remind trigdate syntax."""
         trigdates = [
-            (rdate + timedelta(days=d)).strftime("trigdate()=='%Y-%m-%d'")
+            (rdate + timedelta(days=d)).strftime("$T=='%Y-%m-%d'")
             for rdate in rdates
             for d in range(repeat)
         ]
@@ -515,7 +515,7 @@ class Remind:
                 and trigdates
             ):
                 remind.extend(trigdates)
-                trigdates = dtstart.strftime("SATISFY [trigdate()>='%Y-%m-%d']")
+                trigdates = dtstart.strftime("SATISFY [$T>='%Y-%m-%d']")
 
         if postdate:
             remind.append(postdate)
