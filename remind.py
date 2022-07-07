@@ -548,7 +548,9 @@ class Remind:
                 remind.append(f"DURATION {hours:.0f}:{minutes:02.0f}")
 
         if hasattr(vevent, "rdate"):
-            remind.append(Remind._parse_rdate(vevent.rdate.value))
+            rdates = {rdate.date() for rdate in vevent.rdate.value}
+            rdates.add(dtstart.date())
+            remind.append(Remind._parse_rdate(list(rdates)))
 
         if hasattr(vevent, "class"):
             remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('class'))}")
