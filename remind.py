@@ -365,6 +365,8 @@ class Remind:
     def _parse_rdate(rdates: list[date], repeat: int = 1) -> str:
         """Convert from iCal rdate to Remind trigdate syntax."""
         rdates = sorted(rdates)
+        if len(rdates) == 1 and repeat == 1:
+            return rdates[0].strftime("%Y-%m-%d")
         start = rdates[0].strftime("FROM %Y-%m-%d")
         trigdates = [
             (rdate + timedelta(days=d)).strftime("$T=='%Y-%m-%d'")
