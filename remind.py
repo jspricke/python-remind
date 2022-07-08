@@ -116,7 +116,7 @@ class Remind:
 
         for month in months:
             for entry in month["entries"]:
-                if "passthru" in entry:
+                if "passthru" in entry and entry["passthru"] != "COLOR":
                     continue
 
                 entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{getfqdn()}"
