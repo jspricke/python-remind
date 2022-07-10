@@ -116,8 +116,13 @@ class Remind:
 
         for month in months:
             for entry in month["entries"]:
-                if "passthru" in entry and entry["passthru"] != "COLOR":
-                    continue
+                if "passthru" in entry:
+                    if entry["passthru"] == "COLOR":
+                        groups = match(r"^\d* \d* \d* (.*)$", entry["body"])
+                        if groups:
+                            entry["body"] = groups[1]
+                    else:
+                        continue
 
                 entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{getfqdn()}"
 
