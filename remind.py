@@ -45,6 +45,7 @@ class Remind:
         startdate: date = None,
         month: int = 15,
         alarm: timedelta = None,
+        fqdn: str = None,
     ) -> None:
         """Constructor.
 
@@ -61,6 +62,7 @@ class Remind:
         self._lock = Lock()
         self._reminders: dict[str, dict[str, Any]] = {}
         self._mtime = 0.0
+        self._fqdn = fqdn if fqdn else getfqdn()
 
     def _parse_remind(
         self, filename: str, lines: str = ""
@@ -124,7 +126,7 @@ class Remind:
                     else:
                         continue
 
-                entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{getfqdn()}"
+                entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{self._fqdn}"
 
                 if "eventstart" in entry:
                     dtstart: datetime | date = datetime.strptime(
@@ -279,10 +281,9 @@ class Remind:
         self._update()
         return list(self._reminders.keys())
 
-    @staticmethod
-    def _get_uid(line: str) -> str:
+    def _get_uid(self, line: str) -> str:
         """UID of a remind line."""
-        return f"{md5(line.strip().encode('utf-8')).hexdigest()}@{getfqdn()}"
+        return f"{md5(line.strip().encode('utf-8')).hexdigest()}@{self._fqdn}"
 
     def get_uids(self, filename: str = "") -> list[str]:
         """UIDs of all reminders in the file excluding included files.
@@ -606,7 +607,7 @@ class Remind:
             with open(filename, "a", encoding="utf-8") as outfile:
                 outfile.write(outdat)
 
-        return Remind._get_uid(outdat)
+        return self._get_uid(outdat)
 
     def remove(self, uid: str, filename: str = "") -> None:
         """Remove the Remind command with the uid from the file."""
