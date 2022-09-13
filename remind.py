@@ -131,7 +131,7 @@ class Remind:
                 if "eventstart" in entry:
                     dtstart: datetime | date = datetime.strptime(
                         entry["eventstart"], "%Y-%m-%dT%H:%M"
-                    ).astimezone(self._localtz)
+                    ).replace(tzinfo=self._localtz)
                 else:
                     dtstart = datetime.strptime(entry["date"], "%Y-%m-%d").date()
 
