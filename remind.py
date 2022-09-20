@@ -208,10 +208,10 @@ class Remind:
         vevent.add("dtstart").value = event["dtstart"][0]
 
         msg = event["body"].strip().replace('["["]', "[")
-        groups = match(r'%"(.*)%" (.*)', msg, DOTALL)
+        groups = match(r'%"(.*)%"(\n| )(.*)', msg, DOTALL)
         if groups:
             msg = groups[1]
-            vevent.add("description").value = groups[2]
+            vevent.add("description").value = groups[3]
 
         groups = match(r"^(.*) at (.*)$", msg)
         if groups:
@@ -489,7 +489,7 @@ class Remind:
         priority: str = "",
         tags: str = "",
         tail: str = "",
-        sep: str = " ",
+        sep: str = "%_",
         postdate: str = "",
         posttime: str = "",
     ) -> str:
@@ -583,7 +583,7 @@ class Remind:
         priority: str = "",
         tags: str = "",
         tail: str = "",
-        sep: str = " ",
+        sep: str = "%_",
         postdate: str = "",
         posttime: str = "",
     ) -> str:
@@ -776,7 +776,7 @@ def ics2rem() -> None:
     )
     parser.add_argument(
         "--sep",
-        default=" ",
+        default="%_",
         help="String to separate summary (and tail) from description",
     )
     parser.add_argument(
