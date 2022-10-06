@@ -54,15 +54,15 @@ class Remind:
         startdate -- the date to start parsing, will be passed to remind
         month -- how many month to parse, will be passed to remind -s
         """
-        self._filename = filename if filename else expanduser("~/.reminders")
-        self._localtz = localtz if localtz else tz.gettz()
-        self._startdate = startdate if startdate else date.today() - timedelta(weeks=12)
+        self._filename = filename or expanduser("~/.reminders")
+        self._localtz = localtz or tz.gettz()
+        self._startdate = startdate or date.today() - timedelta(weeks=12)
         self._month = month
-        self._alarm = alarm if alarm else timedelta(minutes=-10)
+        self._alarm = alarm or timedelta(minutes=-10)
         self._lock = Lock()
         self._reminders: dict[str, dict[str, Any]] = {}
         self._mtime = 0.0
-        self._fqdn = fqdn if fqdn else getfqdn()
+        self._fqdn = fqdn or getfqdn()
 
     def _parse_remind(
         self, filename: str, lines: str = ""
