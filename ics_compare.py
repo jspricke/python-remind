@@ -29,12 +29,12 @@ def compare(first_in: Component, second_in: Component, second_out: Component) ->
         found = False
         for (i, first) in enumerate(first_in.vevent_list):
             wrong = False
-            for attr in [
+            for attr in (
                 "summary",
                 "location",
                 "description",
                 "recurrence_id",
-            ]:
+            ):
                 if (
                     hasattr(first, attr)
                     and first.contents.get(attr)
