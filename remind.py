@@ -438,7 +438,7 @@ class Remind:
         return timedelta(0)
 
     @staticmethod
-    def _gen_msg(vevent: Component, label: str, tail: str, sep: str) -> str:
+    def _gen_msg(vevent: Component, label: str, tail: str, sep: str, locations: bool) -> str:
         """Generate a Remind MSG from the given vevent."""
         rem = ["MSG"]
         msg = []
@@ -450,7 +450,7 @@ class Remind:
         else:
             msg.append("empty reminder")
 
-        if hasattr(vevent, "location") and vevent.location.value:
+        if hasattr(vevent, "location") and vevent.location.value and locations:
             msg.append(f"at {Remind._rem_clean(vevent.location.value)}")
 
         has_desc = hasattr(vevent, "description") and vevent.description.value.strip()
@@ -492,6 +492,7 @@ class Remind:
         sep: str = "%_",
         postdate: str = "",
         posttime: str = "",
+        locations: bool = True,
     ) -> str:
         """Generate a Remind command from the given vevent."""
         remind = ["REM"]
@@ -572,7 +573,7 @@ class Remind:
                 for category in categories.value:
                     remind.append(f"TAG {Remind._abbr_tag(category)}")
 
-        remind.append(Remind._gen_msg(vevent, label, tail, sep))
+        remind.append(Remind._gen_msg(vevent, label, tail, sep, locations))
 
         return " ".join(remind) + "\n"
 
@@ -586,13 +587,14 @@ class Remind:
         sep: str = "%_",
         postdate: str = "",
         posttime: str = "",
+        locations: bool = True,
     ) -> str:
         """Return Remind commands for all events of a iCalendar."""
         if not hasattr(ical, "vevent_list"):
             return ""
 
         reminders = [
-            self.to_remind(vevent, label, priority, tags, tail, sep, postdate, posttime)
+            self.to_remind(vevent, label, priority, tags, tail, sep, postdate, posttime, locations)
             for vevent in ical.vevent_list
         ]
         return "".join(reminders)
@@ -760,11 +762,15 @@ def rem2ics() -> None:
 
 def ics2rem() -> None:
     """Command line tool to convert from iCalendar to Remind."""
-    from argparse import ArgumentParser, FileType
+    from argparse import ArgumentParser, FileType, BooleanOptionalAction
     from sys import stdin, stdout
 
     parser = ArgumentParser(description="Converter from iCalendar to Remind syntax.")
     parser.add_argument("-l", "--label", help="Label for every Remind entry")
+    parser.add_argument(
+        "--locations", action=BooleanOptionalAction, default=True,
+        help="Include the location in the message (the default) or not"
+    )
     parser.add_argument(
         "-p", "--priority", type=int, help="Priority for every Remind entry (0..9999)"
     )
@@ -820,5 +826,6 @@ def ics2rem() -> None:
         args.sep,
         args.postdate,
         args.posttime,
+        args.locations,
     )
     args.outfile.write(rem)
