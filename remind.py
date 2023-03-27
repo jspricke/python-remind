@@ -40,12 +40,12 @@ class Remind:
 
     def __init__(
         self,
-        filename: str = None,
-        localtz: None | ZoneInfo = None,
-        startdate: date = None,
+        filename: str | None = None,
+        localtz: ZoneInfo | None = None,
+        startdate: date | None = None,
         month: int = 15,
-        alarm: timedelta = None,
-        fqdn: str = None,
+        alarm: timedelta | None = None,
+        fqdn: str | None = None,
     ) -> None:
         """Constructor.
 
@@ -321,7 +321,7 @@ class Remind:
         return self._vobject_etag(filename, uid)[1:3]
 
     def to_vobjects(
-        self, filename: str, uids: Iterable[str] = None
+        self, filename: str, uids: Iterable[str] | None = None
     ) -> list[tuple[str, Component, str]]:
         """Return iCal objects and etags of all Remind entries in uids.
 
