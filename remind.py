@@ -566,7 +566,7 @@ class Remind:
             remind.append(trigdates)
 
         if tags:
-            remind.extend([f"TAG {Remind._abbr_tag(tag) for tag in tags}"])
+            remind.extend([f"TAG {Remind._abbr_tag(tag)}" for tag in tags])
 
         if hasattr(vevent, "categories_list"):
             for categories in vevent.categories_list:
