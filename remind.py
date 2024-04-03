@@ -109,6 +109,11 @@ class Remind:
 
         for month in months:
             for entry in month["entries"]:
+                # man remind:
+                # If you use the sequence %"%" in a MSG or CAL-type reminder,
+                # then no calendar entry is produced for that reminder.
+                if '%"%"' in entry["body"] and entry["calendar_body"] == "":
+                    continue
                 if "passthru" in entry:
                     if entry["passthru"] == "COLOR":
                         groups = match(r"^\d* \d* \d* (.*)$", entry["body"])
