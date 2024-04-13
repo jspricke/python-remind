@@ -529,6 +529,9 @@ class Remind:
         if hasattr(vevent, "class"):
             remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('class'))}")
 
+        if hasattr(vevent, "status"):
+            remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('status'))}")
+
         if isinstance(trigdates, str):
             remind.append(trigdates)
 
