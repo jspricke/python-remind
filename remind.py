@@ -216,7 +216,12 @@ class Remind:
             if tag_class:
                 vevent.add("class").value = tag_class[0]
 
-            categories = [tag for tag in tags if tag not in classes]
+            statuses = ["TENTATIVE", "CONFIRMED", "CANCELLED"]
+            tag_status = [status for status in tags if status in statuses]
+            if tag_status:
+                vevent.add("status").value = tag_status[0]
+
+            categories = [tag for tag in tags if tag not in classes and tag not in statuses]
 
             if categories:
                 vevent.add("categories").value = categories
@@ -523,6 +528,9 @@ class Remind:
 
         if hasattr(vevent, "class"):
             remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('class'))}")
+
+        if hasattr(vevent, "status"):
+            remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('status'))}")
 
         if isinstance(trigdates, str):
             remind.append(trigdates)
