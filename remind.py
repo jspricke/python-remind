@@ -522,8 +522,8 @@ class Remind:
                 remind.append(f"DURATION {hours:.0f}:{minutes:02.0f}")
 
         if hasattr(vevent, "rdate"):
-            rdates = {rdate.date() for rdate in vevent.rdate.value}
-            rdates.add(dtstart.date())
+            rdates = {rdate for rdate in vevent.rdate.value}
+            rdates.add(dtstart)
             remind.append(Remind._parse_rdate(list(rdates)))
 
         if hasattr(vevent, "class"):
