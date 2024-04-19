@@ -89,6 +89,9 @@ class Remind:
         if f"Can't open file: {filename}" in process.stderr:
             return {filename: {}}
 
+        if "): Parse error" in process.stderr:
+            return {filename: {}}
+
         err = list(set(findall(r"Can't open file: (.*)", process.stderr)))
         if err:
             raise FileNotFoundError(f'include file(s): {", ".join(err)} not found (please use absolute paths)')
