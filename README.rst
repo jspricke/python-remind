@@ -67,6 +67,16 @@ Format of the Remind MSG body
 
 The ``%"`` is omitted, if there is no description in the iCalendar.
 
+Support events in UTC
+---------------------
+
+Remind always uses the local timezone.
+Use something like this to export events in UTC:
+
+::
+
+  REM Tue AT [9:00 + $MinsFromUTC] TAG rem2ics_utc MSG Event
+
 Known limitations
 -----------------
 

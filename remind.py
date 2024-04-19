@@ -131,6 +131,11 @@ class Remind:
                     dtstart: datetime | date = datetime.strptime(entry["eventstart"], "%Y-%m-%dT%H:%M").replace(
                         tzinfo=self._localtz
                     )
+                    if "rem2ics_utc" in entry["tags"]:
+                        utcoffset = datetime(
+                            self._startdate.year, self._startdate.month, self._startdate.day, tzinfo=self._localtz
+                        ).utcoffset()
+                        dtstart = (dtstart - utcoffset).replace(tzinfo=ZoneInfo("UTC"))  # type: ignore
                 else:
                     dtstart = datetime.strptime(entry["date"], "%Y-%m-%d").date()
 
