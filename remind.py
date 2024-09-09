@@ -86,7 +86,10 @@ class Remind:
         if "Unknown option" in process.stderr:
             raise OSError(f'Error running: {" ".join(cmd)}, maybe old remind version')
 
-        if f"Can't open file: {filename}" in process.stderr:
+        if (
+            f"Can't open file: {filename}" in process.stderr
+            or f"Error reading {filename}: Can't open file" in process.stderr
+        ):
             return {filename: {}}
 
         if "): Parse error" in process.stderr:
