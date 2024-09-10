@@ -276,7 +276,7 @@ class Remind:
     def get_filesnames(self) -> list[str]:
         """All filenames parsed by remind (including included files)."""
         self._update()
-        return list(self._reminders.keys())
+        return sorted(self._reminders.keys())
 
     def _get_uid(self, line: str) -> str:
         """UID of a remind line."""
