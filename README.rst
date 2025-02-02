@@ -93,5 +93,5 @@ Remind -> iCalendar
 * Complex reminders are only preserved in their evaluated form (PUSH-OMIT-CONTEXT, OMIT, TRIGGER, BEFORE, SKIP).
   Same holds true for function evaluation in MSG. For example having the age in a birthday reminder results in the same string for every year.
   This could result in old data being provided as the internal state (cache) is only invalidated if one of the remind files change (last time stamp).
-* Periodic reminders other then daily or weekly are not preserved.
+* Periodic reminders other then daily, weekly or monthly are not preserved.
 * Two entries with the same content are only exported once.
