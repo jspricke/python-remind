@@ -21,7 +21,7 @@ from datetime import date, datetime, timedelta
 from hashlib import md5
 from json import JSONDecodeError, loads
 from os.path import expanduser, getmtime, isfile
-from re import DOTALL, findall, match
+from re import findall
 from socket import getfqdn
 from subprocess import run
 from threading import Lock
@@ -120,13 +120,12 @@ class Remind:
                 # then no calendar entry is produced for that reminder.
                 if '%"%"' in entry["body"] and entry["calendar_body"] == "":
                     continue
-                if "passthru" in entry:
-                    if entry["passthru"] == "COLOR":
-                        groups = match(r"^\d* \d* \d* (.*)$", entry["body"])
-                        if groups:
-                            entry["body"] = groups[1]
-                    else:
-                        continue
+                # man remind:
+                # A back-end must ignore a SPECIAL that it does not recognize.
+                # Note that the COLOR special is an exception; it downgrades to
+                # the equivalent of MSG in Remind's normal mode of operation.
+                if "passthru" in entry and entry["passthru"] != "COLOR":
+                    continue
 
                 entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{self._fqdn}"
 
@@ -203,19 +202,21 @@ class Remind:
         """Generate vevent from given event."""
         vevent.add("dtstart").value = event["dtstart"][0]
 
-        msg = event["body"].strip().replace('["["]', "[")
-        groups = match(r'%"(.*)%"(\n| |)(.*)', msg, DOTALL)
-        if groups:
-            msg = groups[1]
-            vevent.add("description").value = groups[3]
+        # man rem2ps
+        # If your back-end is designed to draw a calendar,
+        # then it should use the calendar_body if present.
+        # ..and if not, then it should fall back on the body.
+        vevent.add("summary").value = event.get("calendar_body", event["body"])
 
-        groups = match(r"^(.*) at (.*)$", msg)
-        if groups:
-            msg = groups[1]
-            vevent.add("location").value = groups[2]
+        if "info" in event:
+            if "description" in event["info"]:
+                vevent.add("description").value = event["info"]["description"]
+            if "location" in event["info"]:
+                vevent.add("location").value = event["info"]["location"]
+            if "url" in event["info"]:
+                vevent.add("url").value = event["info"]["url"]
 
         vevent.add("dtstamp").value = datetime.fromtimestamp(self._mtime)
-        vevent.add("summary").value = msg
         vevent.add("uid").value = event["uid"]
 
         if "tags" in event:
@@ -242,7 +243,7 @@ class Remind:
                 valarm = vevent.add("valarm")
                 valarm.add("trigger").value = self._alarm
                 valarm.add("action").value = "DISPLAY"
-                valarm.add("description").value = msg
+                valarm.add("description").value = vevent.summary.value
 
             if "eventduration" in event:
                 vevent.add("duration").value = timedelta(minutes=event["eventduration"])
@@ -363,15 +364,15 @@ class Remind:
         return cal
 
     @staticmethod
-    def _parse_rdate(rdates: list[date], repeat: int = 1) -> str:
+    def _parse_rdate(rdates: list[date], repeat: int = 1) -> list[str]:
         """Convert from iCal rdate to Remind trigdate syntax."""
         rdates = sorted(rdates)
         if len(rdates) == 1 and repeat == 1:
-            return rdates[0].strftime("%Y-%m-%d")
+            return [rdates[0].strftime("%Y-%m-%d")]
         start = rdates[0].strftime("FROM %Y-%m-%d")
         trigdates = [(rdate + timedelta(days=d)).strftime("$T=='%Y-%m-%d'") for rdate in rdates for d in range(repeat)]
         end = (rdates[-1] + timedelta(days=repeat - 1)).strftime("UNTIL %Y-%m-%d")
-        return f"{start} {end} SATISFY [{'||'.join(trigdates)}]"
+        return [start, end, f"SATISFY [{'||'.join(trigdates)}]"]
 
     @staticmethod
     def _parse_rruleset(rruleset: Any, duration: timedelta) -> str | list[str]:
@@ -379,7 +380,7 @@ class Remind:
         # pylint: disable=protected-access
 
         if duration.days > 1:
-            return Remind._parse_rdate(rruleset._rrule[0], duration.days)
+            return " ".join(Remind._parse_rdate(rruleset._rrule[0], duration.days))
 
         if rruleset._rrule[0]._freq == 0:
             return []
@@ -399,7 +400,7 @@ class Remind:
             weekday = weekdays[daynum]
             rep.append(f"{weekday} {week * 7 - 6}")
         else:
-            return Remind._parse_rdate(rruleset._rrule[0])
+            return " ".join(Remind._parse_rdate(rruleset._rrule[0]))
 
         if rruleset._rrule[0]._byweekday and len(rruleset._rrule[0]._byweekday) > 1:
             daynums = set(range(7)) - set(rruleset._rrule[0]._byweekday)
@@ -423,10 +424,10 @@ class Remind:
         return timedelta(0)
 
     @staticmethod
-    def _gen_msg(vevent: Component, label: str, tail: str, sep: str, locations: bool) -> str:
+    def _gen_msg(vevent: Component, label: str, tail: str) -> str:
         """Generate a Remind MSG from the given vevent."""
-        rem = ["MSG"]
-        msg = []
+        msg = ["MSG"]
+
         if label:
             msg.append(label)
 
@@ -435,23 +436,10 @@ class Remind:
         else:
             msg.append("empty reminder")
 
-        if hasattr(vevent, "location") and vevent.location.value and locations:
-            msg.append(f"at {Remind._rem_clean(vevent.location.value)}")
-
-        has_desc = hasattr(vevent, "description") and vevent.description.value.strip()
-
-        if tail or has_desc:
-            rem.append(f'%"{" ".join(msg)}%"')
-        else:
-            rem.append(" ".join(msg))
-
         if tail:
-            rem.append(tail)
+            msg.append(tail)
 
-        if has_desc:
-            rem[-1] += sep + Remind._rem_clean(vevent.description.value).strip()
-
-        return " ".join(rem)
+        return " ".join(msg)
 
     @staticmethod
     def _rem_clean(rem: str) -> str:
@@ -461,6 +449,12 @@ class Remind:
         as a remind entry.
         """
         return rem.strip().replace("%", "%%").replace("\n", "%_").replace("[", "[[")
+
+    @staticmethod
+    def _rem_info_clean(rem: str) -> str:
+        """Cleanup INFO string for Remind.
+        """
+        return rem.strip().replace("\n", r"\n").replace("[", "[[").replace('"', r'\"')
 
     @staticmethod
     def _abbr_tag(tag: str) -> str:
@@ -474,10 +468,8 @@ class Remind:
         priority: str = "",
         tags: str = "",
         tail: str = "",
-        sep: str = "%_",
         postdate: str = "",
         posttime: str = "",
-        locations: bool = True,
     ) -> str:
         """Generate a Remind command from the given vevent."""
         remind = ["REM"]
@@ -528,23 +520,25 @@ class Remind:
             if posttime:
                 remind.append(posttime)
 
-            if duration.total_seconds() > 0:
-                hours, minutes = divmod(duration.total_seconds() / 60, 60)
-                remind.append(f"DURATION {hours:.0f}:{minutes:02.0f}")
-
         if hasattr(vevent, "rdate"):
             rdates = {rdate for rdate in vevent.rdate.value}
             rdates.add(dtstart)
-            remind.append(Remind._parse_rdate(list(rdates)))
+            parsed_rdates = Remind._parse_rdate(list(rdates))
+            if len(parsed_rdates) > 1:
+                trigdates = parsed_rdates[2]
+                remind.extend(parsed_rdates[:2])
+            else:
+                remind.append(parsed_rdates[0])
+
+        if isinstance(dtstart, datetime) and duration.total_seconds() > 0:
+            hours, minutes = divmod(duration.total_seconds() / 60, 60)
+            remind.append(f"DURATION {hours:.0f}:{minutes:02.0f}")
 
         if hasattr(vevent, "class"):
             remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('class'))}")
 
         if hasattr(vevent, "status"):
             remind.append(f"TAG {Remind._abbr_tag(vevent.getChildValue('status'))}")
-
-        if isinstance(trigdates, str):
-            remind.append(trigdates)
 
         if tags:
             remind.extend([f"TAG {Remind._abbr_tag(tag)}" for tag in tags])
@@ -554,7 +548,19 @@ class Remind:
                 for category in categories.value:
                     remind.append(f"TAG {Remind._abbr_tag(category)}")
 
-        remind.append(Remind._gen_msg(vevent, label, tail, sep, locations))
+        if hasattr(vevent, "description") and vevent.description.value:
+            remind.append(f'INFO "Description: {Remind._rem_info_clean(vevent.description.value)}"')
+
+        if hasattr(vevent, "location") and vevent.location.value:
+            remind.append(f'INFO "Location: {Remind._rem_info_clean(vevent.location.value)}"')
+
+        if hasattr(vevent, "url") and vevent.url.value:
+            remind.append(f'INFO "Url: {Remind._rem_info_clean(vevent.url.value)}"')
+
+        if isinstance(trigdates, str):
+            remind.append(trigdates)
+
+        remind.append(Remind._gen_msg(vevent, label, tail))
 
         return " ".join(remind) + "\n"
 
@@ -565,17 +571,15 @@ class Remind:
         priority: str = "",
         tags: str = "",
         tail: str = "",
-        sep: str = "%_",
         postdate: str = "",
         posttime: str = "",
-        locations: bool = True,
     ) -> str:
         """Return Remind commands for all events of a iCalendar."""
         if not hasattr(ical, "vevent_list"):
             return ""
 
         reminders = [
-            self.to_remind(vevent, label, priority, tags, tail, sep, postdate, posttime, locations)
+            self.to_remind(vevent, label, priority, tags, tail, postdate, posttime)
             for vevent in ical.vevent_list
         ]
         return "".join(reminders)
@@ -737,25 +741,14 @@ def rem2ics() -> None:
 
 def ics2rem() -> None:
     """Command line tool to convert from iCalendar to Remind."""
-    from argparse import ArgumentParser, BooleanOptionalAction, FileType
+    from argparse import ArgumentParser, FileType
     from sys import stdin, stdout
 
     parser = ArgumentParser(description="Converter from iCalendar to Remind syntax.")
-    parser.add_argument("-l", "--label", help="Label for every Remind entry")
-    parser.add_argument(
-        "--locations",
-        action=BooleanOptionalAction,
-        default=True,
-        help="Include the location in the message (the default) or not",
-    )
+    parser.add_argument("-l", "--label", help="Text to prepand to every remind summary")
     parser.add_argument("-p", "--priority", type=int, help="Priority for every Remind entry (0..9999)")
     parser.add_argument("-t", "--tag", action="append", help="Tag(s) for every Remind entry")
-    parser.add_argument("--tail", help='Text to append to every remind summary, following final %%"')
-    parser.add_argument(
-        "--sep",
-        default="%_",
-        help="String to separate summary (and tail) from description",
-    )
+    parser.add_argument("--tail", help="Text to append to every remind summary")
     parser.add_argument(
         "--postdate",
         help="String to follow the date in every Remind entry. "
@@ -792,9 +785,7 @@ def ics2rem() -> None:
         args.priority,
         args.tag,
         args.tail,
-        args.sep,
         args.postdate,
         args.posttime,
-        args.locations,
     )
     args.outfile.write(rem)

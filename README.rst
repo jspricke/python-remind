@@ -58,15 +58,6 @@ Publish the URL and use these guides to integrate it into other calendar softwar
 * `Google Calendar <https://support.google.com/calendar/answer/37100>`_
 * `Apple Calendar <https://support.apple.com/kb/PH11523>`_
 
-Format of the Remind MSG body
------------------------------
-
-::
-
-  %"summary at location%" description
-
-The ``%"`` is omitted, if there is no description in the iCalendar.
-
 Support events in UTC
 ---------------------
 
@@ -95,3 +86,4 @@ Remind -> iCalendar
   This could result in old data being provided as the internal state (cache) is only invalidated if one of the remind files change (last time stamp).
 * Periodic reminders other then daily, weekly or monthly are not preserved.
 * Two entries with the same content are only exported once.
+* Remind is run in calendar mode, text outside of a %"...%" sequences is ignored.
