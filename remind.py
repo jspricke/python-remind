@@ -486,7 +486,10 @@ class Remind:
 
         trigdates = None
         if hasattr(vevent, "rrule"):
-            trigdates = Remind._parse_rruleset(vevent.rruleset, duration)
+            try:
+                trigdates = Remind._parse_rruleset(vevent.rruleset, duration)
+            except IndexError:
+                print(vevent)
 
         dtstart = vevent.dtstart.value
         # If we don't get timezone information, handle it as a naive datetime.
