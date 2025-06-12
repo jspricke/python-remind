@@ -163,7 +163,14 @@ class Remind:
         return interval
 
     @staticmethod
-    def _gen_dtend_rrule(dtstarts: list[date], vevent: Component) -> None:
+    def _gen_uid_for_occurrence(base_uid: str, dt: datetime | date) -> str:
+        data = f"{base_uid}|{dt.isoformat()}"
+        uid_hash = md5(data.encode("utf-8")).hexdigest()
+        domain = base_uid.split('@')[-1]
+        return f"{uid_hash}@{domain}"
+
+    @staticmethod
+    def _gen_dtend_rrule(dtstarts: list[date], vevent: Component, cal: Component) -> None:
         """Generate an rdate or rrule from a list of dates and add it to the vevent."""
         interval = Remind._interval(dtstarts)
         if interval > 0 and interval % 7 == 0:
@@ -182,24 +189,27 @@ class Remind:
             else:
                 vevent.add("dtend").value = dtstarts[-1] + timedelta(days=1)
         else:
-            rset = rrule.rruleset()
-            if isinstance(dtstarts[0], datetime):
-                for dat in dtstarts:
-                    rset.rdate(dat)
-            else:
-                for dat in dtstarts:
-                    rset.rdate(datetime(dat.year, dat.month, dat.day))
-            # temporary set dtstart to a different date, so it's not
-            # removed from rset by python-vobject works around bug in
-            # Android:
-            # https://github.com/rfc2822/davdroid/issues/340
-            vevent.dtstart.value = dtstarts[0] - timedelta(days=1)
-            vevent.rruleset = rset
-            vevent.dtstart.value = dtstarts[0]
-            if not isinstance(dtstarts[0], datetime):
-                vevent.add("dtend").value = dtstarts[0] + timedelta(days=1)
+            for dat in dtstarts:
+                new_event = cal.add('vevent')
 
-    def _gen_vevent(self, event: dict[str, Any], vevent: Component) -> None:
+                if isinstance(dat, datetime):
+                    new_event.add('dtstart').value = dat
+                else:
+                    new_event.add('dtstart').value = datetime(dat.year, dat.month, dat.day)
+                    new_event.add('dtend').value = datetime(dat.year, dat.month, dat.day) + timedelta(days=1)
+
+                for prop in ['summary', 'description', 'location']:
+                    if hasattr(vevent, prop):
+                        new_event.add(prop).value = getattr(vevent, prop).value
+
+                summary = getattr(vevent, "summary", None)
+                summary_value = summary.value if summary else ""
+
+                # Generate a stable UID for this occurrence
+                base_uid = vevent.uid.value  # original UID
+                new_event.add('uid').value = Remind._gen_uid_for_occurrence(base_uid, dat)
+
+    def _gen_vevent(self, event: dict[str, Any], vevent: Component, cal: Component) -> None:
         """Generate vevent from given event."""
         vevent.add("dtstart").value = event["dtstart"][0]
 
@@ -253,7 +263,7 @@ class Remind:
             vevent.add("dtend").value = event["dtstart"][0] + timedelta(days=1)
 
         if len(event["dtstart"]) > 1:
-            Remind._gen_dtend_rrule(event["dtstart"], vevent)
+            Remind._gen_dtend_rrule(event["dtstart"], vevent, cal)
 
     def _update(self) -> None:
         """Reload Remind files if the mtime is newer."""
@@ -352,7 +362,7 @@ class Remind:
         else:
             for events in self._reminders.values():
                 for event in events.values():
-                    self._gen_vevent(event, cal.add("vevent"))
+                    self._gen_vevent(event, cal.add("vevent"), cal)
         return cal
 
     def stdin_to_vobject(self, lines: str) -> Component:
