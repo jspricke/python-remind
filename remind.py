@@ -213,6 +213,8 @@ class Remind:
         if groups:
             msg = groups[1]
             vevent.add("location").value = groups[2]
+        elif event["info"]["url"]:
+            vevent.add("location").value = event["info"]["url"]
 
         vevent.add("dtstamp").value = datetime.fromtimestamp(self._mtime)
         vevent.add("summary").value = msg
@@ -553,6 +555,10 @@ class Remind:
             for categories in vevent.categories_list:
                 for category in categories.value:
                     remind.append(f"TAG {Remind._abbr_tag(category)}")
+
+        if hasattr(vevent, "location") and vevent.location.value.startswith("http") and locations:
+            remind.append(f'INFO "url: {vevent.location.value}"')
+            locations = False
 
         remind.append(Remind._gen_msg(vevent, label, tail, sep, locations))
 
