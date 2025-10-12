@@ -141,12 +141,15 @@ class Remind:
                 else:
                     dtstart = datetime.strptime(entry["date"], "%Y-%m-%d").date()
 
-                if entry["uid"] in reminders[entry["filename"]]:
-                    if dtstart not in reminders[entry["filename"]][entry["uid"]]["dtstart"]:
-                        reminders[entry["filename"]][entry["uid"]]["dtstart"].append(dtstart)
+                filename = entry["filename"]
+                if filename == "-stdin-":  # changed in remind 05.05.00
+                    filename = "-"
+                if entry["uid"] in reminders[filename]:
+                    if dtstart not in reminders[filename][entry["uid"]]["dtstart"]:
+                        reminders[filename][entry["uid"]]["dtstart"].append(dtstart)
                 else:
                     entry["dtstart"] = [dtstart]
-                    reminders[entry["filename"]][entry["uid"]] = entry
+                    reminders[filename][entry["uid"]] = entry
 
         return reminders
 
