@@ -486,7 +486,7 @@ class Remind:
         dtstart = vevent.dtstart.value
         # If we don't get timezone information, handle it as a naive datetime.
         # See https://github.com/jspricke/python-remind/issues/2 for reference.
-        if isinstance(dtstart, datetime) and dtstart.tzinfo:
+        if isinstance(dtstart, datetime) and dtstart.tzinfo is None:
             dtstart = dtstart.astimezone(self._localtz)
 
         dtend = None
