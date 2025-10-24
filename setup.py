@@ -18,7 +18,7 @@ setup(
         "Topic :: Office/Business :: Scheduling",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    install_requires=["python-dateutil", "vobject"],
+    install_requires=["python-dateutil", "vobject", "tzlocal", "pytz"],
     py_modules=["remind", "ics_compare"],
     entry_points={
         "console_scripts": [

@@ -58,16 +58,6 @@ Publish the URL and use these guides to integrate it into other calendar softwar
 * `Google Calendar <https://support.google.com/calendar/answer/37100>`_
 * `Apple Calendar <https://support.apple.com/kb/PH11523>`_
 
-Support events in UTC
----------------------
-
-Remind always uses the local timezone.
-Use something like this to export events in UTC:
-
-::
-
-  REM Tue AT [9:00 + $MinsFromUTC] TAG rem2ics_utc MSG Event
-
 Known limitations
 -----------------
 

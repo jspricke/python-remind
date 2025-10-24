@@ -27,11 +27,14 @@ from subprocess import run
 from threading import Lock
 from time import time
 from typing import Any
-from zoneinfo import ZoneInfo
 
-from dateutil import rrule, tz
+from dateutil import rrule
+# TODO: switch to zoneinfo with https://github.com/py-vobject/vobject/pull/118
+from pytz import timezone as ZoneInfo
+from tzlocal import get_localzone_name
 from vobject import iCalendar
 from vobject.base import Component, readOne
+from vobject.icalendar import TimezoneComponent
 
 
 class Remind:
@@ -40,7 +43,7 @@ class Remind:
     def __init__(
         self,
         filename: str | None = None,
-        localtz: ZoneInfo | None = None,
+        localtz: str | None = None,
         startdate: date | None = None,
         month: int = 15,
         alarm: timedelta | None = None,
@@ -54,7 +57,7 @@ class Remind:
         month -- how many month to parse, will be passed to remind -s
         """
         self._filename = filename or expanduser("~/.reminders")
-        self._localtz = localtz or tz.gettz()
+        self._localtz = ZoneInfo(localtz or get_localzone_name())
         self._startdate = startdate or date.today() - timedelta(weeks=12)
         self._month = month
         self._alarm = alarm or timedelta(minutes=-10)
@@ -129,15 +132,14 @@ class Remind:
 
                 entry["uid"] = f"{entry['tags'].split(',')[-1][7:]}@{self._fqdn}"
 
-                if "eventstart" in entry:
+                if "eventstart_in_tz" in entry:
+                    dtstart: datetime | date = datetime.strptime(entry["eventstart_in_tz"], "%Y-%m-%dT%H:%M").replace(
+                        tzinfo=ZoneInfo(entry["tz"])
+                    )
+                elif "eventstart" in entry:
                     dtstart: datetime | date = datetime.strptime(entry["eventstart"], "%Y-%m-%dT%H:%M").replace(
                         tzinfo=self._localtz
                     )
-                    if "rem2ics_utc" in entry["tags"]:
-                        utcoffset = datetime(
-                            self._startdate.year, self._startdate.month, self._startdate.day, tzinfo=self._localtz
-                        ).utcoffset()
-                        dtstart = (dtstart - utcoffset).replace(tzinfo=ZoneInfo("UTC"))  # type: ignore
                 else:
                     dtstart = datetime.strptime(entry["date"], "%Y-%m-%d").date()
 
@@ -551,6 +553,13 @@ class Remind:
                 for category in categories.value:
                     remind.append(f"TAG {Remind._abbr_tag(category)}")
 
+        if isinstance(dtstart, datetime):
+            tzid = TimezoneComponent.pickTzid(dtstart.tzinfo)
+            if tzid is None:
+                tzid = "UTC"
+            if TimezoneComponent.pickTzid(self._localtz) != tzid:
+                remind.append(f"TZ {tzid}")
+
         if hasattr(vevent, "description") and vevent.description.value:
             remind.append(f'INFO "Description: {Remind._rem_info_clean(vevent.description.value)}"')
 
@@ -730,15 +739,13 @@ def rem2ics() -> None:
         args.outfile = open(args.infile, "w", encoding="utf-8")
         args.infile = None
 
-    zone = ZoneInfo(args.zone) if args.zone else None
-
     if args.infile == "-":
-        remind = Remind(args.infile, zone, args.startdate, args.month, timedelta(minutes=args.alarm))
+        remind = Remind(args.infile, args.zone, args.startdate, args.month, timedelta(minutes=args.alarm))
         vobject = remind.stdin_to_vobject(stdin.read())
         if vobject:
             args.outfile.write(vobject.serialize())
     else:
-        remind = Remind(args.infile, zone, args.startdate, args.month, timedelta(minutes=args.alarm))
+        remind = Remind(args.infile, args.zone, args.startdate, args.month, timedelta(minutes=args.alarm))
         args.outfile.write(remind.to_vobject().serialize())
 
 
@@ -779,10 +786,8 @@ def ics2rem() -> None:
     )
     args = parser.parse_args()
 
-    zone = ZoneInfo(args.zone) if args.zone else None
-
     vobject = readOne(args.infile.read())
-    rem = Remind(localtz=zone).to_reminders(
+    rem = Remind(localtz=args.zone).to_reminders(
         vobject,
         args.label,
         args.priority,
