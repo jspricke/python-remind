@@ -551,7 +551,8 @@ class Remind:
         if hasattr(vevent, "categories_list"):
             for categories in vevent.categories_list:
                 for category in categories.value:
-                    remind.append(f"TAG {Remind._abbr_tag(category)}")
+                    if category:
+                        remind.append(f"TAG {Remind._abbr_tag(category)}")
 
         if isinstance(dtstart, datetime):
             tzid = TimezoneComponent.pickTzid(dtstart.tzinfo)
